@@ -9,6 +9,12 @@ use Test::Mojo;
 use Test::Class::Most
   parent => 'MonkWorld::Test::Base';
 
+sub schema { 'monk_test' }
+
+sub db_teardown : Test(teardown) ($self) {
+    $self->pg->db->delete('monk', { id => { -not_in => [$self->anonymous_user_id] } });
+}
+
 sub a_monk_can_be_created : Test(2) ($self) {
     my $t = $self->mojo;
 

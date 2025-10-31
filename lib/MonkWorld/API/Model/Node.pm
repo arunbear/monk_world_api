@@ -38,8 +38,16 @@ sub _create ($self, $db, $node_data) {
 
     my $collection = $result->hashes;
     if ($collection->size > 0) {
-        my $inserted = $collection->first;
-        $node_data->{node_id} //= $inserted->{id};
+        if ($node_data->{node_id}) {
+            # Inserting with an explicit id can desynchronize the auto increment sequence
+            # So, sync the sequence to prevent future ID conflicts
+            # https://dba.stackexchange.com/a/210599
+            $db->query("SELECT setval(pg_get_serial_sequence('node', 'id'), COALESCE((SELECT MAX(id) FROM node), 0), true)");
+        }
+        else {
+            my $inserted = $collection->first;
+            $node_data->{node_id} //= $inserted->{id};
+        }
     }
 
     if ($node_data->{node_type_id} == NODE_TYPE_NOTE) {

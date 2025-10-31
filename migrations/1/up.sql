@@ -11,7 +11,7 @@ CREATE TABLE monk (
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE EXTENSION IF NOT EXISTS ltree;
+CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public;
 
 -- Table for storing user posts
 CREATE TABLE node (
@@ -30,7 +30,7 @@ CREATE TABLE note (
     node_id      BIGINT PRIMARY KEY REFERENCES node(id),
     parent_node  BIGINT NOT NULL REFERENCES node(id),
     root_node    BIGINT NOT NULL REFERENCES node(id),
-    path         ltree  NOT NULL
+    path         public.ltree  NOT NULL
 );
 
 -- Indexes for better query performance

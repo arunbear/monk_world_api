@@ -8,8 +8,9 @@ use Mojo::Pg::Transaction;
 use Test::Class::Most
   parent => 'MonkWorld::Test::Base';
 
+sub schema { 'note_test' }
+
 sub a_note_can_be_created : Test(4) ($self) {
-    my $override = $self->make_transactions_noop;
     my $t = $self->mojo;
 
     my $auth_token = $ENV{MONKWORLD_AUTH_TOKEN}
@@ -91,12 +92,12 @@ sub a_note_can_be_created : Test(4) ($self) {
 }
 
 sub a_note_cannot_be_created_if_parent_node_does_not_exist : Test(3) ($self) {
-    my $override = $self->make_transactions_noop;
     my $t = $self->mojo;
 
     my $auth_token = $ENV{MONKWORLD_AUTH_TOKEN}
         or return('Expected MONKWORLD_AUTH_TOKEN in %ENV');
 
+    my $non_existing_node = $self->max_node_id + 1;
     $t->post_ok(
         '/node' => {
             'Authorization' => "Bearer $auth_token"
@@ -105,16 +106,15 @@ sub a_note_cannot_be_created_if_parent_node_does_not_exist : Test(3) ($self) {
             author_id    => $self->anonymous_user_id,
             title        => 'Test Note with no root',
             doctext      => 'No root',
-            parent_node  => 1,
-            root_node    => 1,
+            parent_node  => $non_existing_node,
+            root_node    => $non_existing_node,
         }
     )
-        ->json_like('/error' => qr/parent_node.+ is not present/)
-        ->status_is(HTTP::Status::HTTP_UNPROCESSABLE_ENTITY);
+    ->json_like('/error' => qr/parent_node.+ is not present/)
+    ->status_is(HTTP::Status::HTTP_UNPROCESSABLE_ENTITY);
 }
 
 sub a_note_cannot_be_created_if_its_non_root_parent_is_not_in_note_table : Test(5) ($self) {
-    my $override = $self->make_transactions_noop;
     my $t = $self->mojo;
 
     my $auth_token = $ENV{MONKWORLD_AUTH_TOKEN}
@@ -151,13 +151,12 @@ sub a_note_cannot_be_created_if_its_non_root_parent_is_not_in_note_table : Test(
 }
 
 sub a_note_can_be_created_as_reply_to_reply : Test(10) ($self) {
-    my $override = $self->make_transactions_noop;
     my $t = $self->mojo;
 
     my $auth_token = $ENV{MONKWORLD_AUTH_TOKEN}
       or return('Expected MONKWORLD_AUTH_TOKEN in %ENV');
 
-    # Create root node (a Perl question)
+    note 'Create a root node';
     my $root = $t->post_ok(
         '/node' => {
             'Authorization' => "Bearer $auth_token"
@@ -166,11 +165,11 @@ sub a_note_can_be_created_as_reply_to_reply : Test(10) ($self) {
             author_id    => $self->anonymous_user_id,
             title        => 'Root Question',
             doctext      => 'This is the root question',
-        }
+        },
     )->status_is(HTTP_CREATED)
      ->tx->res->json;
 
-    # Create first reply to root
+    note 'Create first reply to root';
     my $first_reply = $t->post_ok(
         '/node' => {
             'Authorization' => "Bearer $auth_token"
@@ -185,7 +184,7 @@ sub a_note_can_be_created_as_reply_to_reply : Test(10) ($self) {
     )->status_is(HTTP_CREATED)
      ->tx->res->json;
 
-    # Create a reply to the first reply
+    note 'Create a reply to the first reply';
     $t->post_ok(
         '/node' => {
             'Authorization' => "Bearer $auth_token"
@@ -202,4 +201,8 @@ sub a_note_can_be_created_as_reply_to_reply : Test(10) ($self) {
      ->json_is('/parent_node' => $first_reply->{id})
      ->json_is('/root_node' => $root->{id})
      ->json_is('/path' => sprintf('%d.%d.%d', $root->{id}, $first_reply->{id}, $t->tx->res->json->{id}));
+}
+
+sub max_node_id ($self) {
+    return $self->pg->db->query('SELECT MAX(id) FROM node')->hash->{max};
 }

@@ -5,7 +5,7 @@ use Mojo::Pg;
 use Sub::Override;
 use Test::Mojo;
 use Test::Class::Most
-  attributes  => [qw/mojo pg dbh/];
+  attributes  => [qw/mojo pg/];
 
 INIT { Test::Class->runtests }
 
@@ -15,32 +15,20 @@ sub db_prepare : Test(startup) ($self) {
 
     my $path = $t->app->home->child('migrations');
     my $pg = $t->app->pg;
-    $pg->migrations->from_dir($path)->migrate;
-
     $self->pg($pg);
-    $self->dbh($pg->db->dbh);
+
+    $self->setup_schema;
+    $pg->migrations->from_dir($path)->migrate;
 }
 
-# Start a new transaction before each test to ensure test isolation.
-sub db_setup : Test(setup) ($self) {
-    $self->dbh->begin_work;
-}
-
-# Roll back all changes after each test.
-# This ensures tests don't affect each other.
-sub db_teardown : Test(teardown) ($self) {
-    $self->dbh->rollback;
+sub setup_schema ($self) {
+    my $schema = $self->schema;
+    my $pg = $self->pg;
+    $pg->search_path([$schema]);
+    $pg->db->query("DROP SCHEMA IF EXISTS $schema CASCADE");
+    $pg->db->query("CREATE SCHEMA $schema");
 }
 
 sub anonymous_user_id ($self) {
     return $self->pg->db->select('monk', ['id'], { username => 'Anonymous Monk' })->hash->{id};
-}
-
-sub make_transactions_noop ($self) {
-    my $tx = bless {}, 'Mojo::Pg::Transaction';
-    my $override = Sub::Override->new(
-        'Mojo::Pg::Database::begin' => sub { $tx },
-        'Mojo::Pg::Transaction::commit' => sub { 1 },
-    );
-    return $override;
 }

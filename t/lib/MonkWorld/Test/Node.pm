@@ -6,9 +6,9 @@ use HTTP::Status qw(HTTP_CREATED HTTP_CONFLICT);
 use Test::Class::Most
   parent => 'MonkWorld::Test::Base';
 
+sub schema { 'node_test' }
 
 sub a_node_can_be_created : Test(4) ($self) {
-    my $override = $self->make_transactions_noop;
     my $t = $self->mojo;
 
     my $auth_token = $ENV{MONKWORLD_AUTH_TOKEN}
@@ -72,7 +72,6 @@ sub a_node_can_be_created : Test(4) ($self) {
 }
 
 sub a_node_cannot_be_created_if_id_already_exists : Test(7) ($self) {
-    my $override = $self->make_transactions_noop;
     my $t = $self->mojo;
 
     my $auth_token = $ENV{MONKWORLD_AUTH_TOKEN}

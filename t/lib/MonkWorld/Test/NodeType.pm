@@ -5,10 +5,16 @@ use HTTP::Status qw(HTTP_CREATED);
 use Mojo::Pg;
 use Mojo::URL;
 use Test::Mojo;
+use MonkWorld::API::Constants qw(NODE_TYPE_PERLQUESTION NODE_TYPE_NOTE);
 
 use Test::Class::Most
   parent => 'MonkWorld::Test::Base';
 
+sub schema { 'node_type_test' }
+
+sub db_teardown : Test(teardown) ($self) {
+    $self->pg->db->delete('node_type', { id => { -not_in => [NODE_TYPE_PERLQUESTION, NODE_TYPE_NOTE] } });
+}
 
 sub a_node_type_can_be_created : Test(2) ($self) {
     my $t = $self->mojo;
