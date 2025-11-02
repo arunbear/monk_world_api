@@ -5,6 +5,7 @@ use Devel::Assert 'on';
 use Mojo::Base -base, -signatures;
 use MonkWorld::API::Constants 'NODE_TYPE_NOTE';
 
+has 'log';
 has 'pg';
 
 sub create ($self, $node_data) {
@@ -88,6 +89,6 @@ sub _create_note ($self, $db, $node_data) {
         path        => $path
     }, { on_conflict => undef });
 
-    printf("Rows inserted into note: %d\n", $note_results->rows);
+    $self->log->debug(sprintf "Rows inserted into note: %d", $note_results->rows);
     return $path;
 }

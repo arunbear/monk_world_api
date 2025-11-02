@@ -7,7 +7,7 @@ use Mojo::JSON qw(decode_json);
 use MonkWorld::API::Model::Node;
 
 has node_model => sub ($self) {
-    MonkWorld::API::Model::Node->new(pg => $self->pg);
+    MonkWorld::API::Model::Node->new(pg => $self->pg, log => $self->log);
 };
 
 sub create ($self) {
@@ -24,6 +24,7 @@ sub create ($self) {
         $collection = $self->node_model->create($data);
     }
     catch ($error) {
+        $self->log->error(trim $error);
         return $self->render(
             json   => { error => $error },
             status => HTTP_UNPROCESSABLE_ENTITY

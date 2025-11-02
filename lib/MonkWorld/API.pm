@@ -1,4 +1,5 @@
 package MonkWorld::API;
+use v5.40;
 use Mojo::Base 'Mojolicious', -signatures;
 use HTTP::Status 'HTTP_UNAUTHORIZED';
 
@@ -7,6 +8,7 @@ sub startup ($self) {
 
   # Load configuration from config file
   my $config = $self->plugin('NotYAMLConfig');
+  $self->configure_logging;
 
   # Configure the application
   $self->secrets($config->{secrets});
@@ -42,4 +44,8 @@ sub startup ($self) {
   $auth->post('/node')->to('Node#create');
 }
 
-1;
+sub configure_logging ($self) {
+    my $config = $self->config;
+    $self->log->path($config->{logger}{path});
+    $self->log->level($config->{logger}{level});
+}
