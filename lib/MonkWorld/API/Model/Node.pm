@@ -2,11 +2,10 @@ package MonkWorld::API::Model::Node;
 
 use v5.40;
 use Devel::Assert 'on';
-use Mojo::Base -base, -signatures;
+use Mojo::Base 'MonkWorld::API::Model::Base', -signatures;
 use MonkWorld::API::Constants 'NODE_TYPE_NOTE';
 
-has 'log';
-has 'pg';
+sub table_name ($self) { 'node' }
 
 sub create ($self, $node_data) {
     my $db = $self->pg->db;
@@ -40,10 +39,7 @@ sub _create ($self, $db, $node_data) {
     my $collection = $result->hashes;
     if ($collection->size > 0) {
         if ($node_data->{node_id}) {
-            # Inserting with an explicit id can desynchronize the auto increment sequence
-            # So, sync the sequence to prevent future ID conflicts
-            # https://dba.stackexchange.com/a/210599
-            $db->query("SELECT setval(pg_get_serial_sequence('node', 'id'), COALESCE((SELECT MAX(id) FROM node), 0), true)");
+            $self->sync_id_sequence($db);
         }
         else {
             my $inserted = $collection->first;
