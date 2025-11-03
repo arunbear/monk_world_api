@@ -3,10 +3,14 @@ use v5.40;
 use Mojo::Base 'Mojolicious', -signatures;
 use HTTP::Status 'HTTP_UNAUTHORIZED';
 
+# Add convenience methods to Mojo::Collection
+use Mojo::Util 'monkey_patch';
+monkey_patch 'Mojo::Collection',
+    is_empty     => sub ($self) { $self->size == 0 },
+    is_not_empty => sub ($self) { $self->size > 0 };
+
 # This method will run once at server start
 sub startup ($self) {
-
-  # Load configuration from config file
   my $config = $self->plugin('NotYAMLConfig');
   $self->configure_logging;
 
