@@ -43,15 +43,6 @@ CREATE INDEX idx_note_root ON note(root_node);
 CREATE INDEX idx_note_parent ON note(parent_node);
 CREATE INDEX idx_note_path ON note USING GIST (path);
 
--- Insert the anonymous user
-INSERT INTO monk (id, username, created_at, updated_at)
-VALUES (961, 'Anonymous Monk', NOW(), NOW());
-
--- Add node types
-INSERT INTO node_type (id, name) VALUES
-(11, 'note'),
-(115, 'perlquestion');
-
 -- Function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$

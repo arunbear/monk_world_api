@@ -19,6 +19,11 @@ sub db_prepare : Test(startup) ($self) {
 
     $self->setup_schema;
     $pg->migrations->from_dir($path)->migrate;
+    $self->create_anonymous_user;
+}
+
+sub create_anonymous_user ($self) {
+    $self->pg->db->insert('monk', { username => 'Anonymous Monk' });
 }
 
 sub setup_schema ($self) {

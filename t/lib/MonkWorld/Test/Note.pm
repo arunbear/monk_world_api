@@ -10,6 +10,11 @@ use Test::Class::Most
 
 sub schema { 'note_test' }
 
+sub startup : Test(startup) ($self) {
+    $self->pg->db->insert('node_type', { id => NODE_TYPE_NOTE, name => 'note' });
+    $self->pg->db->insert('node_type', { id => NODE_TYPE_PERLQUESTION, name => 'perlquestion' });
+}
+
 sub a_note_can_be_created : Test(4) ($self) {
     my $t = $self->mojo;
 
