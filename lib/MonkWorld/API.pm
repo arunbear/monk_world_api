@@ -1,4 +1,5 @@
 package MonkWorld::API;
+our $VERSION = 0.001_001;
 use v5.40;
 use Mojo::Base 'Mojolicious', -signatures;
 use HTTP::Status 'HTTP_UNAUTHORIZED';
@@ -26,7 +27,7 @@ sub startup ($self) {
   # Router
   my $r = $self->routes;
 
-  $r->get('/')->to('Example#welcome');
+  $r->get('/')->to('Root#index');
   $r->get('/health' => sub ($c) { $c->render(json => ['OK']) });
 
   # Protected routes
@@ -43,7 +44,7 @@ sub startup ($self) {
       return undef;
   });
 
-  $auth->post('/node-type')->to('NodeType#create');
+  $auth->post('/node-type')->to('NodeType#create')->name('create_node_type');
   $auth->post('/monk')->to('Monk#create');
   $auth->post('/node')->to('Node#create');
 }
