@@ -20,6 +20,17 @@ sub index ($self) {
                     id   => 'NODE_TYPE_ID',
                 }
             },
+            create_monk => {
+                href => $self->url_for('create_monk'),
+                method => 'POST',
+                headers => {
+                    'Authorization' => 'Bearer %s'
+                },
+                json => {
+                    username => 'MONK_USERNAME',
+                    id       => 'MONK_ID',
+                }
+            },
         },
     });
 }
