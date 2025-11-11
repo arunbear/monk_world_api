@@ -31,6 +31,20 @@ sub index ($self) {
                     id       => 'MONK_ID',
                 }
             },
+            create_node => {
+                href => $self->url_for('create_node'),
+                method => 'POST',
+                headers => {
+                    'Authorization' => 'Bearer %s',
+                },
+                json => {
+                    node_id      => 'NODE_ID',       # Optional
+                    node_type_id => 'NODE_TYPE_ID',  # Required
+                    author_id    => 'AUTHOR_ID',     # Required
+                    title        => 'NODE_TITLE',    # Required
+                    doctext      => 'NODE_DOCTEXT'   # Required
+                }
+            },
         },
     });
 }

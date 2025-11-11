@@ -46,7 +46,7 @@ sub startup ($self) {
 
   $auth->post('/node-type')->to('NodeType#create')->name('create_node_type');
   $auth->post('/monk')->to('Monk#create')->name('create_monk');
-  $auth->post('/node')->to('Node#create');
+  $auth->post('/node')->to('Node#create')->name('create_node');
 }
 
 sub configure_logging ($self) {
