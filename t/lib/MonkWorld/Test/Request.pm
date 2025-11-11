@@ -95,6 +95,36 @@ sub non_existent_placeholder_values_are_ignored : Test(1) ($self) {
     is_deeply($req->json, $before_json, 'is unchanged');
 }
 
+sub resetting_an_existing_key_from_json_updates_that_entry : Test(1) ($self) {
+    my %req_args = (link_meta => {
+        method  => 'POST',
+        href    => '/resource',
+        headers => {},
+        json    => { name => 'Test' },
+    }, with_auth_token => false);
+
+    note "The 'name' JSON entry in this request:"; explain \%req_args;
+    my $req = MonkWorld::API::Request->new(%req_args);
+
+    $req->update_json_kv(name => 'UPDATED');
+    is_deeply $req->json => { name => 'UPDATED' }, 'is updated';
+}
+
+sub resetting_multiple_keys_from_json_updates_those_entries : Test(1) ($self) {
+    my %req_args = (link_meta => {
+        method  => 'POST',
+        href    => '/resource',
+        headers => {},
+        json    => { id => 1, name => 'Test' },
+    }, with_auth_token => false);
+
+    note "In this request:"; explain \%req_args;
+    my $req = MonkWorld::API::Request->new(%req_args);
+
+    $req->update_json_entries(id => 42, name => 'UPDATED');
+    is_deeply $req->json => { id => 42, name => 'UPDATED' }, 'JSON entries are updated';
+}
+
 sub removing_an_existing_key_from_json_removes_that_entry : Test(1) ($self) {
     my %req_args = (link_meta => {
         method  => 'POST',
