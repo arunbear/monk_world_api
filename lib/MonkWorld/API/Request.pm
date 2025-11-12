@@ -107,9 +107,7 @@ sub update_json_kv ($self, $key, $value) {
 
 sub update_json_entries ($self, %updates) {
     while (my ($key, $value) = each %updates) {
-        if (exists $self->json->{$key}) {
-            $self->json->{$key} = $value;
-        }
+        $self->json->{$key} = $value;
     }
     return $self;
 }
