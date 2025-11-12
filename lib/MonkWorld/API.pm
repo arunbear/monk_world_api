@@ -2,6 +2,7 @@ package MonkWorld::API;
 our $VERSION = 0.001_001;
 use v5.40;
 use Mojo::Base 'Mojolicious', -signatures;
+use Mojo::Pg;
 use HTTP::Status 'HTTP_UNAUTHORIZED';
 
 # Add convenience methods to Mojo::Collection

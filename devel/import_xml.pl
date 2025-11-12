@@ -5,16 +5,25 @@ use feature 'try';
 use Data::Dump 'dump';
 use Devel::Assert 'on';
 use Getopt::Long;
+use HTTP::Status qw(HTTP_CONFLICT);
 use Mojolicious;
 use Mojo::Pg;
 use Mojo::DOM;
 use Mojo::Util qw(trim);
 use Path::Iterator::Rule;
 use XXX -with => 'Data::Dump';
+use Mojo::UserAgent;
 
-my %OPT;
+my %OPT = (
+    'use-api' => true,
+    uri       => 'http://localhost:3000',
+    verbose   => false,
+);
 GetOptions(\%OPT,
-    'limit=i',
+    'use-api!',
+    'uri=s',
+    'verbose',
+    'limit=i'
 ) or die "Error in command line arguments\n";
 
 process_xml();
@@ -29,6 +38,7 @@ sub process_xml {
             $count += import_node_data(parse_xml($file));
             last if defined $OPT{limit} && $count == $OPT{limit};
         }
+        say "Nodes imported: $count";
     }
     else {
         # Process single XML file
@@ -77,6 +87,10 @@ sub parse_xml ($xml_file) {
 }
 
 sub import_node_data ($node_data) {
+    if ($OPT{'use-api'}) {
+        return import_node_data_via_api($node_data);
+    }
+
     my $pg = get_db_connection();
     my $db = $pg->db;
     my $tx = $db->begin;
@@ -89,7 +103,7 @@ sub import_node_data ($node_data) {
         $tx->commit;
     } catch ($error) {
         my $message = "Failed to import node $node_data->{node_id}: $error\n" . dump($node_data);
-        if ($error =~ /is not present in table "node"/) {
+        if ($error =~ /is not present in table \"node\"/) {
             warn "[Skipping] $message";
         }
         else {
@@ -198,4 +212,99 @@ sub get_db_connection {
     assert $ENV{MONKWORLD_PG_URL} =~ /^postgresql:/;
     state $pg = Mojo::Pg->new($ENV{MONKWORLD_PG_URL});
     return $pg;
+}
+
+# ====== API Import Path ======
+
+sub api_ua {
+    state $ua = do {
+        my $ua = Mojo::UserAgent->new;
+        $ua->insecure(1); # allow self-signed during devel
+        $ua;
+    };
+    return $ua;
+}
+
+sub api_base_uri { return $OPT{uri} }
+
+sub api_auth_headers {
+    my $token = $ENV{MONKWORLD_AUTH_TOKEN}
+        or die "MONKWORLD_AUTH_TOKEN is required for API import";
+    return { 'Authorization' => "Bearer $token" };
+}
+
+sub api_post ($path, $json) {
+    my $url = api_base_uri() . $path;
+    my $tx  = api_ua()->build_tx(POST => $url => api_auth_headers() => json => $json);
+    my $res = api_ua()->start($tx)->result;
+    return $res;
+}
+
+sub ensure_node_type_exists_api ($node_data) {
+    my $res = api_post('/node-type', {
+        id   => $node_data->{type_id},
+        name => $node_data->{type_name},
+    });
+    return 1 if $res->is_success;
+    return 1 if $res->code && $res->code == HTTP_CONFLICT; # already exists
+    die "create node-type failed: " . ($res->message // $res->to_string);
+}
+
+sub ensure_author_exists_api ($node_data) {
+    my $res = api_post('/monk', {
+        id       => $node_data->{author_id},
+        username => $node_data->{author_username},
+    });
+    return 1 if $res->is_success;
+    return 1 if $res->code && $res->code == HTTP_CONFLICT; # already exists
+    die "create monk failed: " . ($res->message // $res->to_string);
+}
+
+sub insert_node_api ($node_data) {
+    return 0 if !$node_data->{doctext};
+    $node_data->{updated} = $node_data->{created}
+        if ($node_data->{updated} // '') eq '0000-00-00 00:00:00';
+
+    my %payload = (
+        node_id      => $node_data->{node_id},
+        node_type_id => $node_data->{type_id},
+        author_id    => $node_data->{author_id},
+        title        => $node_data->{title},
+        doctext      => $node_data->{doctext},
+        created      => $node_data->{created},
+        updated      => $node_data->{updated},
+    );
+    if ($node_data->{type_id} == 11) {
+        $payload{root_node}   = $node_data->{root_node};
+        $payload{parent_node} = $node_data->{parent_node};
+    }
+
+    my $res = api_post('/node', \%payload);
+    if ($res->is_success) {
+        return 1;
+    }
+    my $err = eval { $res->json('/error') } // $res->body;
+    if ($res->code == HTTP_CONFLICT
+        || $err =~ /parent_node.+ is not present/
+        || $err =~ /root_node.+ is not present/
+        || $err =~ /Non root parent \d+ not present/
+    ) {
+        my $dump = $OPT{verbose} ? dump($node_data) : '';
+        warn "[Skipping] Failed to import node $node_data->{node_id}: $err\n$dump";
+        return 0;
+    }
+    die "create node failed: $err";
+}
+
+sub import_node_data_via_api ($node_data) {
+    my $rows = 0;
+    try {
+        ensure_node_type_exists_api($node_data);
+        ensure_author_exists_api($node_data);
+        $rows = insert_node_api($node_data);
+    } catch ($error) {
+        my $message = "Failed to import node $node_data->{node_id}: $error\n" . dump($node_data);
+        die "[STOPPED] $message";
+    }
+    return $rows;
 }
