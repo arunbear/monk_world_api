@@ -29,7 +29,7 @@ sub create ($self) {
 
     if ($collection->is_empty) {
         return $self->render(
-            json   => { error => 'Node type with this name already exists' },
+            json   => { error => "Node type with this name ($data->{name}) already exists" },
             status => HTTP_CONFLICT
         );
     }
