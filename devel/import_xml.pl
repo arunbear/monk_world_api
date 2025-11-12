@@ -286,6 +286,7 @@ sub insert_node_api ($node_data) {
     my $err = eval { $res->json('/error') } // $res->body;
     if ($res->code == HTTP_CONFLICT
         || $err =~ /parent_node.+ is not present/
+        || $err =~ /root_node.+ is not present/
         || $err =~ /Non root parent \d+ not present/
     ) {
         my $dump = $OPT{verbose} ? dump($node_data) : '';
