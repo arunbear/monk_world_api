@@ -45,6 +45,10 @@ sub index ($self) {
                     doctext      => 'NODE_DOCTEXT'   # Required
                 }
             },
+            get_threads => {
+                href => $self->url_for('get_threads'),
+                method => 'GET',
+            },
         },
     });
 }
