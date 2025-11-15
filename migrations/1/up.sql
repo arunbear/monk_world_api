@@ -22,26 +22,26 @@ CREATE TABLE node (
     doctext      TEXT         NOT NULL,
     reputation   INTEGER      NOT NULL DEFAULT 0,
     created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    path         public.ltree  NOT NULL
 );
 
 -- Table for storing reply hierarchy information
 CREATE TABLE note (
     node_id      BIGINT PRIMARY KEY REFERENCES node(id),
     parent_node  BIGINT NOT NULL REFERENCES node(id),
-    root_node    BIGINT NOT NULL REFERENCES node(id),
-    path         public.ltree  NOT NULL
+    root_node    BIGINT NOT NULL REFERENCES node(id)
 );
 
 -- Indexes for better query performance
 CREATE INDEX idx_node_created ON node(created_at);
 CREATE INDEX idx_node_author ON node(author_id);
 CREATE INDEX idx_node_type ON node(node_type_id);
+CREATE INDEX idx_node_path ON node USING GIST (path);
 
 -- Indexes for note hierarchy
 CREATE INDEX idx_note_root ON note(root_node);
 CREATE INDEX idx_note_parent ON note(parent_node);
-CREATE INDEX idx_note_path ON note USING GIST (path);
 
 -- Function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_modified_column()
@@ -52,8 +52,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Triggers to automatically update timestamps
+-- Ensure node.path defaults to ltree of id if not provided
+CREATE OR REPLACE FUNCTION ensure_node_path()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.path IS NULL THEN
+        NEW.path := (NEW.id::text)::public.ltree;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
+CREATE TRIGGER set_node_default_path
+BEFORE INSERT ON node
+FOR EACH ROW
+EXECUTE FUNCTION ensure_node_path();
+
+-- Triggers to automatically update timestamps
 CREATE TRIGGER update_node_modtime
 BEFORE UPDATE ON node
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();

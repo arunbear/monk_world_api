@@ -167,8 +167,8 @@ sub a_note_cannot_be_created_if_its_non_root_parent_is_not_in_note_table : Test(
     ;
     $tx = $t->ua->build_tx($req->tx_args);
     $t->request_ok($tx)
-    ->status_is(HTTP::Status::HTTP_UNPROCESSABLE_ENTITY)
-    ->json_like('/error' => qr/Non root parent.+ not present/)
+      ->status_is(HTTP::Status::HTTP_UNPROCESSABLE_ENTITY)
+      ->json_like('/error' => qr/root_node.+ is not present/)
     ;
 }
 
