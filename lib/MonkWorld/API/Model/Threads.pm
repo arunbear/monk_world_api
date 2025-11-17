@@ -11,7 +11,7 @@ sub get_threads ($self, $cutoff_interval = '1 day') {
     for my $row (@$rows) {
         my $section_key = $row->{section_name};
 
-        my $is_root_node = !defined $row->{parent_node};
+        my $is_root_node = $row->{path} eq $row->{id};
         if ($is_root_node) {
             $result->{$section_key}{ $row->{id} }{title} = $row->{title};
             next;
@@ -47,12 +47,8 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
     # It returns threads that have been entirely created in the $cutoff_interval,
     # OR any replies created in the $cutoff_interval, plus their ancestors.
     #
-    # Why JOIN node r ON r.id = COALESCE(no.root_node, n.id)?
-    # - For replies, note.root_node points to the thread's root node.
-    # - For root posts, there is no note row, so COALESCE falls back to n.id.
-    # This gives us a canonical root id (r.id) for every row, which we use to:
-    #   * derive the section from the root node's node_type (JOIN node_type s ON s.id = r.node_type_id)
-    #   * evaluate the cutoff at the thread level via EXISTS (...) WHERE no2.root_node = r.id
+    # The section is derived from the root node's node_type, which is assumed to be the first
+    # segment in the path.
     my $rows = $db->query(q{
           WITH recent AS (
             SELECT id, path
@@ -63,11 +59,9 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
             n.id,
             n.title,
             n.path,
-            s.name AS section_name,
-            no.parent_node
+            s.name AS section_name
           FROM node n
-          LEFT JOIN note no ON no.node_id = n.id
-          JOIN node r ON r.id = COALESCE(no.root_node, n.id)
+          JOIN node r ON r.id = (subpath(n.path, 0, 1))::text::bigint
           JOIN node_type s ON s.id = r.node_type_id
           JOIN recent rc ON n.path @> rc.path
           ORDER BY n.id ASC
