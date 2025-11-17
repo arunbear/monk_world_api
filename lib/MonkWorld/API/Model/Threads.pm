@@ -7,7 +7,7 @@ sub get_threads ($self, $cutoff_interval = '1 day') {
     my $rows = $self->fetch_threads_rows($cutoff_interval);
 
     my $result = {};
-    my @wanted_fields = qw(title created_at);
+    my @wanted_fields = qw(title created_at author_username author_id);
 
     for my $row (@$rows) {
         my $section_key = $row->{section_name};
@@ -65,8 +65,11 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
             n.title,
             n.path,
             n.created_at,
+            m.username AS author_username,
+            m.id AS author_id,
             s.name AS section_name
           FROM node n
+          JOIN monk m ON m.id = n.author_id
           JOIN node r ON r.id = (subpath(n.path, 0, 1))::text::bigint
           JOIN node_type s ON s.id = r.node_type_id
           JOIN recent rc ON n.path @> rc.path
