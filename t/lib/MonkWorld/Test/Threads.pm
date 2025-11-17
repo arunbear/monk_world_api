@@ -95,7 +95,7 @@ sub trees_of_nodes_can_be_retrieved_grouped_by_section : Test(no_plan) ($self) {
     eq_or_diff $result, $expected;
 }
 
-sub threads_can_be_retrieved_so_long_as_they_have_recent_replies : Test(no_plan) ($self) {
+sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) ($self) {
     my $t = $self->mojo;
 
     {

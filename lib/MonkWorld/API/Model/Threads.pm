@@ -45,7 +45,7 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
 
     # Query notes:
     # It returns threads that have been entirely created in the $cutoff_interval,
-    # OR threads where any reply has been created in the $cutoff_interval.
+    # OR any replies created in the $cutoff_interval, plus their ancestors.
     #
     # Why JOIN node r ON r.id = COALESCE(no.root_node, n.id)?
     # - For replies, note.root_node points to the thread's root node.
@@ -54,6 +54,11 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
     #   * derive the section from the root node's node_type (JOIN node_type s ON s.id = r.node_type_id)
     #   * evaluate the cutoff at the thread level via EXISTS (...) WHERE no2.root_node = r.id
     my $rows = $db->query(q{
+          WITH recent AS (
+            SELECT id, path
+            FROM node
+            WHERE created_at >= now() - $1::interval
+          )
           SELECT
             n.id,
             n.title,
@@ -64,14 +69,7 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
           LEFT JOIN note no ON no.node_id = n.id
           JOIN node r ON r.id = COALESCE(no.root_node, n.id)
           JOIN node_type s ON s.id = r.node_type_id
-          WHERE n.created_at >= now() - $1::interval
-             OR EXISTS (
-                  SELECT 1
-                  FROM note no2
-                  JOIN node n2 ON n2.id = no2.node_id
-                  WHERE no2.root_node = r.id
-                    AND n2.created_at >= now() - $1::interval
-              )
+          JOIN recent rc ON n.path @> rc.path
           ORDER BY n.id ASC
         }, $cutoff_interval
     )->hashes->to_array;
