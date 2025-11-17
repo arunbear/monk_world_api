@@ -14,6 +14,7 @@ hypermedia APIs.
 use v5.40;
 use Moo;
 use namespace::autoclean;
+use Storable qw(dclone);
 use Types::Standard qw(Bool Enum HashRef Maybe StrMatch);
 
 my $HttpMethod = Enum [qw(HEAD GET POST PUT DELETE PATCH)];
@@ -69,13 +70,19 @@ has _json => (
     reader => 'json',
     isa => Maybe[HashRef],
 );
+has _form => (
+    is => 'rw', init_arg => undef,
+    reader => 'form',
+    isa => Maybe[HashRef],
+);
 
 sub BUILD ($self, $args) {
-    my $link = $self->_link_meta;
+    my $link = dclone($self->_link_meta); # avoid modifying the original
     $self->_method($link->{method});
     $self->_href($link->{href});
-    $self->_headers($link->{headers});
-    $self->_json($link->{json});
+    $self->_headers($link->{headers} // {});
+    $self->_json($link->{json} // {});
+    $self->_form($link->{form} // {});
     $self->_add_bearer_token($ENV{MONKWORLD_AUTH_TOKEN}) if $self->_with_auth_token;
 }
 
@@ -117,6 +124,16 @@ sub ignore_json_kv ($self, $key) {
     return $self;
 }
 
+sub update_form_entries ($self, %updates) {
+    while (my ($key, $value) = each %updates) {
+        $self->form->{$key} = $value;
+    }
+    return $self;
+}
+
 sub tx_args ($self) {
-    return($self->method => $self->href => $self->headers => json => $self->json);
+    my $has_form = $self->form && scalar keys $self->form->%*;
+    my $payload_key = $has_form ? 'form' : 'json';
+    my $payload     = $has_form ? $self->form : $self->json;
+    return ($self->method => $self->href => $self->headers => $payload_key => $payload);
 }

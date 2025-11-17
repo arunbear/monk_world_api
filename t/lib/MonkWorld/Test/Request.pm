@@ -156,7 +156,7 @@ sub removing_a_non_existent_key_leaves_json_unchanged : Test(1) ($self) {
     is_deeply($req->json, $before_json, 'is unchanged');
 }
 
-sub can_generate_args_for_mojo_build_tx : Test(1) ($self) {
+sub can_generate_args_for_build_tx_with_json : Test(1) ($self) {
     my $req = MonkWorld::API::Request->new(link_meta => {
         method  => 'POST',
         href    => '/resource',
@@ -177,6 +177,34 @@ sub can_generate_args_for_mojo_build_tx : Test(1) ($self) {
             'Authorization' => 'Bearer test_token_123',
         },
         'json',
+        {
+            id => 1,
+        },
+    ];
+    eq_or_diff \@args, $expected;
+}
+
+sub can_generate_args_for_build_tx_with_form : Test(1) ($self) {
+    my $req = MonkWorld::API::Request->new(link_meta => {
+        method  => 'GET',
+        href    => '/resource',
+        headers => {
+            'Authorization' => 'Bearer %s',
+        },
+        form => {
+            id => 1,
+        },
+    });
+
+    my @args = $req->tx_args;
+
+    my $expected = [
+        'GET',
+        '/resource',
+        {
+            'Authorization' => 'Bearer test_token_123',
+        },
+        'form',
         {
             id => 1,
         },
@@ -208,4 +236,22 @@ sub invalid_uris_are_rejected : Test(1) ($self) {
             },
         );
     } qr/did not pass type constraint/;
+}
+
+sub updating_form_entries_updates_form_hash : Test(2) ($self) {
+    my %req_args = (
+        link_meta => {
+            method => 'GET',
+            href   => '/threads',
+            headers => {},
+            form    => { days => '1' },
+        },
+        with_auth_token => false,
+    );
+
+    my $req = MonkWorld::API::Request->new(%req_args);
+    is $req->form->{days}, '1', 'can obtain default value from link meta';
+
+    $req->update_form_entries(days => 7, nights => 'no');
+    eq_or_diff $req->form, { days => 7, nights => 'no' }, 'form entries are updated';
 }

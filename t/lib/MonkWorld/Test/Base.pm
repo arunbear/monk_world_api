@@ -29,7 +29,7 @@ sub create_anonymous_user ($self) {
 sub setup_schema ($self) {
     my $schema = $self->schema;
     my $pg = $self->pg;
-    $pg->search_path([$schema]);
+    $pg->search_path([$schema, 'public']);
     $pg->db->query("DROP SCHEMA IF EXISTS $schema CASCADE");
     $pg->db->query("CREATE SCHEMA $schema");
 }

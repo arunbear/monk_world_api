@@ -1,0 +1,25 @@
+package MonkWorld::API::Controller::Threads;
+use v5.40;
+use Mojo::Base 'Mojolicious::Controller', -signatures;
+use MonkWorld::API::Constants qw(NODE_TYPE_NOTE NODE_TYPE_PERLQUESTION);
+use MonkWorld::API::Model::Threads;
+
+has threads_model => sub ($self) {
+    MonkWorld::API::Model::Threads->new(pg => $self->pg, log => $self->log);
+};
+
+# GET /threads
+# Returns threads grouped by section in the structure expected by the test
+sub index ($self) {
+    my $days = $self->param('days');
+    my $default = '1 day';
+    my $interval =
+        defined $days && $days =~ /^\d+$/ && $days < 8
+            ? ($days == 1 ? $default : "$days days")
+            : $default;
+    my $result = $self->threads_model->get_threads($interval);
+
+    return $self->render(
+        json => $result,
+    );
+}

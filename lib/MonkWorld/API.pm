@@ -31,6 +31,9 @@ sub startup ($self) {
   $r->get('/')->to('Root#index');
   $r->get('/health' => sub ($c) { $c->render(json => ['OK']) });
 
+
+  $r->get('/threads')->to('Threads#index')->name('get_threads');
+
   # Protected routes
   my $auth = $r->under(sub ($c) {
       my $auth_header = $c->req->headers->authorization // '';
