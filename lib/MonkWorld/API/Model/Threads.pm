@@ -7,13 +7,16 @@ sub get_threads ($self, $cutoff_interval = '1 day') {
     my $rows = $self->fetch_threads_rows($cutoff_interval);
 
     my $result = {};
+    my @wanted_fields = qw(title created_at);
 
     for my $row (@$rows) {
         my $section_key = $row->{section_name};
 
         my $is_root_node = $row->{path} eq $row->{id};
         if ($is_root_node) {
-            $result->{$section_key}{ $row->{id} }{title} = $row->{title};
+            foreach my $field (@wanted_fields) {
+                $result->{$section_key}{ $row->{id} }{$field} = $row->{$field};
+            }
             next;
         }
 
@@ -34,7 +37,9 @@ sub get_threads ($self, $cutoff_interval = '1 day') {
             $cursor->{reply}{$seg_id} //= {};
             $cursor = $cursor->{reply}{$seg_id};
         }
-        $cursor->{title} //= $row->{title};
+        foreach my $field (@wanted_fields) {
+            $cursor->{$field} = $row->{$field};
+        }
     }
 
     return $result;
@@ -59,6 +64,7 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
             n.id,
             n.title,
             n.path,
+            n.created_at,
             s.name AS section_name
           FROM node n
           JOIN node r ON r.id = (subpath(n.path, 0, 1))::text::bigint

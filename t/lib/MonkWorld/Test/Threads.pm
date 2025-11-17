@@ -56,17 +56,21 @@ sub trees_of_nodes_can_be_retrieved_grouped_by_section : Test(no_plan) ($self) {
     $t->request_ok($tx)
       ->status_is(HTTP_OK);
 
-    # Define expected structure with actual node titles and IDs
-    my $expected = {
+    my $expected_time = localtime->strftime('%Y-%m-%d %H:%M'); # Pg timestamp might be a second off
+
+    my $expected_json = {
         Section_1 => {
             "$self->{node_store}{Thread_1}{id}" => {
                 title => 'Thread_1',
+                created_at => re($expected_time),
                 reply => {
                     "$self->{node_store}{'reply.Thread_1'}{id}" => {
                         title => 'reply.Thread_1',
+                        created_at => re($expected_time),
                         reply => {
                             "$self->{node_store}{'reply.reply.Thread_1'}{id}" => {
                                 title => 'reply.reply.Thread_1',
+                                created_at => re($expected_time),
                             }
                         }
                     }
@@ -76,12 +80,15 @@ sub trees_of_nodes_can_be_retrieved_grouped_by_section : Test(no_plan) ($self) {
         Section_2 => {
             "$self->{node_store}{'Thread_2'}{id}" => {
                 title => 'Thread_2',
+                created_at => re($expected_time),
                 reply => {
                     "$self->{node_store}{'reply.Thread_2'}{id}" => {
                         title => 'reply.Thread_2',
+                        created_at => re($expected_time),
                         reply => {
                             "$self->{node_store}{'reply.reply.Thread_2'}{id}" => {
                                 title => 'reply.reply.Thread_2',
+                                created_at => re($expected_time),
                             }
                         }
                     }
@@ -92,23 +99,22 @@ sub trees_of_nodes_can_be_retrieved_grouped_by_section : Test(no_plan) ($self) {
 
     # Get and verify the actual response
     my $result = $t->tx->res->json;
-    eq_or_diff $result, $expected;
+    cmp_deeply $result, $expected_json;
 }
 
 sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) ($self) {
     my $t = $self->mojo;
 
-    {
-        my $time = localtime;
-        my $four_days_ago = ($time - 4 * ONE_DAY)->datetime;
-        my $two_days_ago  = ($time - 2 * ONE_DAY)->datetime;
 
-        $self->_create_thread(
-            $self->{section_1}{id},
-            'Thread_1',
-            [ $four_days_ago, $two_days_ago ],
-        );
-    }
+    my $time = localtime;
+    my $four_days_ago = ($time - 4 * ONE_DAY);
+    my $two_days_ago  = ($time - 2 * ONE_DAY);
+
+    $self->_create_thread(
+        $self->{section_1}{id},
+        'Thread_1',
+        [ $four_days_ago->datetime, $two_days_ago->datetime ],
+    );
 
     # Get the threads using API::Request
     my $sitemap = $self->get_sitemap;
@@ -126,12 +132,15 @@ sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) (
         Section_1 => {
             "$self->{node_store}{Thread_1}{id}" => {
                 title => 'Thread_1',
+                created_at => $four_days_ago->date.' '.$four_days_ago->time,
                 reply => {
                     "$self->{node_store}{'reply.Thread_1'}{id}" => {
                         title => 'reply.Thread_1',
+                        created_at => $two_days_ago->date.' '.$two_days_ago->time,
                         reply => {
                             "$self->{node_store}{'reply.reply.Thread_1'}{id}" => {
                                 title => 'reply.reply.Thread_1',
+                                created_at => re($time->date.' '.$time->time),
                             }
                         }
                     }
@@ -141,7 +150,7 @@ sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) (
     };
 
     my $result = $t->tx->res->json;
-    eq_or_diff $result, $expected;
+    cmp_deeply $result, $expected;
 }
 
 # Creates a thread with replies, deriving reply titles and text from the thread title
