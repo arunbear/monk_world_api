@@ -117,7 +117,6 @@ sub trees_of_nodes_can_be_retrieved_grouped_by_section : Test(no_plan) ($self) {
 sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) ($self) {
     my $t = $self->mojo;
 
-
     my $time = localtime;
     my $four_days_ago = ($time - 4 * ONE_DAY);
     my $two_days_ago  = ($time - 2 * ONE_DAY);
@@ -169,6 +168,36 @@ sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) (
 
     my $result = $t->tx->res->json;
     cmp_deeply $result, $expected;
+}
+
+sub nodes_are_not_retrieved_outside_the_cutoff_interval : Test(no_plan) ($self) {
+    my $t = $self->mojo;
+
+    my $time = localtime;
+    my $six_days_ago  = ($time - 6 * ONE_DAY);
+    my $four_days_ago = ($time - 4 * ONE_DAY);
+    my $two_days_ago  = ($time - 2 * ONE_DAY);
+
+    $self->_create_thread(
+        $self->{section_1}{id},
+        'Thread_1',
+        [ $six_days_ago->datetime, $four_days_ago->datetime, $two_days_ago->datetime ],
+    );
+
+    # Get the threads using API::Request
+    my $sitemap = $self->get_sitemap;
+    my $req = MonkWorld::API::Request->new(
+        link_meta => $sitemap->{_links}{get_threads},
+        with_auth_token => false,
+    );
+    my $tx = $t->ua->build_tx($req->tx_args);
+
+    $t->request_ok($tx)
+      ->status_is(HTTP_OK);
+
+    my $expected = { };
+    my $result = $t->tx->res->json;
+    eq_or_diff $result, $expected;
 }
 
 # Creates a thread with replies, deriving reply titles and text from the thread title
