@@ -48,6 +48,9 @@ sub index ($self) {
             get_threads => {
                 href => $self->url_for('get_threads'),
                 method => 'GET',
+                form => {
+                    days => '1',
+                }
             },
         },
     });
