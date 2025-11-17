@@ -11,7 +11,13 @@ has threads_model => sub ($self) {
 # GET /threads
 # Returns threads grouped by section in the structure expected by the test
 sub index ($self) {
-    my $result = $self->threads_model->get_threads;
+    my $days = $self->param('days');
+    my $default = '1 day';
+    my $interval =
+        defined $days && $days =~ /^\d+$/ && $days < 8
+            ? ($days == 1 ? $default : "$days days")
+            : $default;
+    my $result = $self->threads_model->get_threads($interval);
 
     return $self->render(
         json => $result,
