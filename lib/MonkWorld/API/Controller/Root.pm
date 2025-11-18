@@ -52,6 +52,12 @@ sub index ($self) {
                     days => '1',
                 }
             },
+            get_thread => {
+                href => $self->url_for('get_thread'),
+                method => 'GET',
+                form => {
+                }
+            },
         },
     });
 }
