@@ -21,7 +21,7 @@ my $HttpMethod = Enum [qw(HEAD GET POST PUT DELETE PATCH)];
 my $NoSpaces = StrMatch[qr/^ [[:^space:]]+ $/x];
 
 my $Word = qr{
-    [a-z]+           # one or more lowercase letters
+    [[:alnum:]]+     # one or more alphanumerics
     (?:-[a-z]+)*     # optional hyphenated parts
 }x;
 my $Path = qr{
@@ -30,6 +30,7 @@ my $Path = qr{
         $Word
         (?:/$Word)*  # additional segments
     )?
+    /?               # optional slash
     $                # end of string
 }x;
 my $RelativeUri = StrMatch[qr{$Path}];
@@ -128,6 +129,12 @@ sub update_form_entries ($self, %updates) {
     while (my ($key, $value) = each %updates) {
         $self->form->{$key} = $value;
     }
+    return $self;
+}
+
+sub add_uri_segment ($self, $segment) {
+    my $separator = $self->href =~ m{/$} ? '' : '/';
+    $self->_href($self->href . $separator . $segment);
     return $self;
 }
 
