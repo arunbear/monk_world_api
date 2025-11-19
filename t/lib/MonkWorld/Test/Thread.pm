@@ -167,5 +167,3 @@ sub a_subthread_of_a_subthread_can_be_retrieved_by_id : Test(11) ($self) {
     my $result = $t->tx->res->json;
     cmp_deeply $result, $expected_json or explain $result;
 }
-
-# _create_thread method is now provided by MonkWorld::Test::Role::ThreadCreation
