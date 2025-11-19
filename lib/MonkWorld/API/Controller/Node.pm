@@ -45,3 +45,9 @@ sub create ($self) {
         status => HTTP_CREATED
     );
 }
+
+sub get ($self) {
+    my $node_id = $self->stash('id');
+    my $node = $self->node_model->get_thread($node_id);
+    $self->render(json => $node);
+}

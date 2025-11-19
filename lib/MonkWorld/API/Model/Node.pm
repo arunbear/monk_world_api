@@ -7,6 +7,48 @@ use MonkWorld::API::Constants 'NODE_TYPE_NOTE';
 
 sub table_name ($self) { 'node' }
 
+sub get_thread ($self, $node_id) {
+    my $rows = $self->_fetch_thread_rows($node_id);
+    return {} unless @$rows;
+
+    my $result = {};
+    my @wanted_fields = qw(title created_at author_username author_id);
+
+    for my $row (@$rows) {
+        my $is_top = $row->{id} == $node_id;
+
+        if ($is_top) {
+            my @context_fields = qw(section_name);
+            if ($node_id != $row->{root_id}) {
+                push @context_fields, qw(root_id root_title parent_id parent_title);
+            }
+            $result->{$row->{id}} = {
+                map { $_ => $row->{$_} } (@wanted_fields, @context_fields)
+            };
+            next;
+        }
+
+        # Handle replies by walking the path
+        my @ids =
+            grep { $_ >= $node_id } # for replies we don't want ancestors
+            split /\./, $row->{path};
+
+        # Start from the top
+        my $cursor = $result->{$ids[0]} ||= {};
+
+        # Walk the path to find the right place for this node
+        for my $seg_id (@ids[1..$#ids]) {
+            $cursor->{reply}{$seg_id} //= {};
+            $cursor = $cursor->{reply}{$seg_id};
+        }
+
+        # Set the node's fields
+        $cursor->{$_} = $row->{$_} for @wanted_fields;
+    }
+
+    return $result;
+}
+
 sub create ($self, $node_data) {
     my $db = $self->pg->db;
     try {
@@ -92,4 +134,34 @@ sub _create_note_path ($self, $db, $node_data) {
         { returning => 'path' },
     );
     return $results->hash->{path};
+}
+
+sub _fetch_thread_rows ($self, $node_id) {
+    my $db = $self->pg->db;
+
+    my $rows = $db->query(q{
+          SELECT
+            n.id,
+            n.title,
+            n.path,
+            n.created_at,
+            m.username AS author_username,
+            m.id AS author_id,
+            r.id AS root_id,
+            r.title AS root_title,
+            p.id AS parent_id,
+            p.title AS parent_title,
+            s.name AS section_name
+          FROM node n
+          JOIN monk m ON m.id = n.author_id
+          JOIN node r ON r.id = (subpath(n.path, 0, 1))::text::bigint
+          JOIN node_type s ON s.id = r.node_type_id
+          LEFT JOIN node p ON p.path = subpath(n.path, 0, -1)
+          WHERE n.path <@ (SELECT path FROM node WHERE id = $1)
+            OR n.id = $1
+          ORDER BY n.id ASC
+        }, $node_id
+    )->hashes->to_array;
+
+    return $rows;
 }

@@ -31,7 +31,7 @@ sub startup ($self) {
   $r->get('/')->to('Root#index');
   $r->get('/health' => sub ($c) { $c->render(json => ['OK']) });
 
-
+  $r->get('/thread/:id')->to('Node#get')->name('get_thread');
   $r->get('/threads')->to('Threads#index')->name('get_threads');
 
   # Protected routes
