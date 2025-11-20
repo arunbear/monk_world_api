@@ -43,6 +43,11 @@ CREATE INDEX idx_node_path ON node USING GIST (path);
 CREATE INDEX idx_note_root ON note(root_node);
 CREATE INDEX idx_note_parent ON note(parent_node);
 
+-- Index for full-text search
+CREATE INDEX idx_node_search ON node USING GIN (
+    to_tsvector('english', title || ' ' || doctext)
+);
+
 -- Function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$

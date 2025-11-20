@@ -9,9 +9,14 @@ use MonkWorld::API::Constants 'NODE_TYPE_NOTE';
 
 =head2 _create_thread
 
-Creates a thread with replies, deriving reply titles and text from the thread title
+Creates a thread with replies, with optional custom text for each node
 
-  my @nodes = $self->_create_thread($section_id, $thread_title, \@creation_dates);
+  my @nodes = $self->_create_thread(
+      $section_id,
+      $thread_title,
+      \@creation_dates,
+      \@node_texts
+  );
 
 Parameters:
 
@@ -24,12 +29,17 @@ Parameters:
 =item * C<$creation_dates> - Optional array of creation dates, one for each node being created.
   A missing value means no date is passed to the API.
 
+=item * C<$node_texts> - Optional array of text content for each node in the thread.
+  If not provided, default text will be used. The array should contain up to 3 elements:
+  [root_text, first_reply_text, second_reply_text]
+
 =back
 
 Returns: List of created nodes (root, first_reply, second_reply)
 
 =cut
-sub _create_thread ($self, $section_id, $thread_title, $creation_dates = []) {
+
+sub _create_thread ($self, $section_id, $thread_title, $creation_dates = [], $node_texts = []) {
     my $t = $self->mojo;
 
     note "Create a root node $thread_title in section $section_id";
@@ -40,7 +50,7 @@ sub _create_thread ($self, $section_id, $thread_title, $creation_dates = []) {
             node_type_id => $section_id,
             author_id    => $self->anonymous_user_id,
             title        => $thread_title,
-            doctext      => "Discussion about: $thread_title",
+            doctext      => $node_texts->[0] // "Discussion about: $thread_title",
             # Optional created timestamp for root
             (defined $creation_dates->[0]
                 ? (created => $creation_dates->[0])
@@ -61,7 +71,7 @@ sub _create_thread ($self, $section_id, $thread_title, $creation_dates = []) {
             node_type_id => NODE_TYPE_NOTE,
             author_id    => $self->anonymous_user_id,
             title        => "reply.$thread_title",
-            doctext      => "Further discussion about: $thread_title",
+            doctext      => $node_texts->[1] // "Further discussion about: $thread_title",
             parent_node  => $root->{id},
             root_node    => $root->{id},
             # Optional created timestamp for first reply
@@ -84,7 +94,7 @@ sub _create_thread ($self, $section_id, $thread_title, $creation_dates = []) {
             node_type_id => NODE_TYPE_NOTE,
             author_id    => $self->anonymous_user_id,
             title        => "reply.reply.$thread_title",
-            doctext      => "Even more discussion about: $thread_title",
+            doctext      => $node_texts->[2] // "Even more discussion about: $thread_title",
             parent_node  => $first_reply->{id},
             root_node    => $root->{id},
             # Optional created timestamp for second reply
