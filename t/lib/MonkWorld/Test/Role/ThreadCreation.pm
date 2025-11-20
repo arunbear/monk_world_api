@@ -7,15 +7,28 @@ use Test::More;
 use HTTP::Status qw(HTTP_CREATED);
 use MonkWorld::API::Constants 'NODE_TYPE_NOTE';
 
-# Creates a thread with replies, deriving reply titles and text from the thread title
-#
-# Parameters:
-#   $section_id - ID of the section to create the thread in
-#   $thread_title - Main title for the thread (required)
-#   $creation_dates - An optional array of creation dates, one for each node being created.
-#     A missing value means no date is passed to the API.
-#
-# Returns: List of created nodes (root, first_reply, second_reply)
+=head2 _create_thread
+
+Creates a thread with replies, deriving reply titles and text from the thread title
+
+  my @nodes = $self->_create_thread($section_id, $thread_title, \@creation_dates);
+
+Parameters:
+
+=over 4
+
+=item * C<$section_id> - ID of the section to create the thread in
+
+=item * C<$thread_title> - Main title for the thread (required)
+
+=item * C<$creation_dates> - Optional array of creation dates, one for each node being created.
+  A missing value means no date is passed to the API.
+
+=back
+
+Returns: List of created nodes (root, first_reply, second_reply)
+
+=cut
 sub _create_thread ($self, $section_id, $thread_title, $creation_dates = []) {
     my $t = $self->mojo;
 
