@@ -80,6 +80,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
         [
             {
                 'author_username' => 'Anonymous Monk',
+                author_id         => $self->anonymous_user_id,
                 'created_at'      => re($expected_time),
                 'doctext'         => '"Perl Best Practices" by Damian Conway is a must-read for any serious Perl programmer.',
                 'id'              => $self->{node_store}{'reply.Book recommendations'}{id},
@@ -88,6 +89,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
             },
             {
                 'author_username' => 'Anonymous Monk',
+                author_id         => $self->anonymous_user_id,
                 'created_at'      => re($expected_time),
                 'doctext'         => 'Always use strict and warnings in your Perl code to catch common mistakes.',
                 'id'              => $self->{node_store}{'Best Practices'}{id},

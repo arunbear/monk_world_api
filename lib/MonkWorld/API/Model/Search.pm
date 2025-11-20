@@ -20,6 +20,7 @@ sub search ($self, $query) {
             n.title,
             n.doctext,
             n.created_at,
+            m.id as author_id,
             m.username as author_username,
             s.name as section_name
         FROM node n
