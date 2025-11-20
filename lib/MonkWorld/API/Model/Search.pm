@@ -18,7 +18,6 @@ sub search ($self, $query) {
         SELECT
             n.id,
             n.title,
-            n.doctext,
             n.created_at,
             m.id as author_id,
             m.username as author_username,
