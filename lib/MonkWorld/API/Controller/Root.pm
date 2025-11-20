@@ -58,6 +58,13 @@ sub index ($self) {
                 form => {
                 }
             },
+            search => {
+                href => $self->url_for('search'),
+                method => 'GET',
+                form => {
+                    q => 'QUERY',
+                }
+            },
         },
     });
 }
