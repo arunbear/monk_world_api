@@ -18,14 +18,15 @@ sub search ($self, $query) {
         SELECT
             n.id,
             n.title,
-            n.node_type_id,
             n.doctext,
             n.created_at,
             m.username as author_username,
-            nt.name as node_type_name
+            s.name as section_name
         FROM node n
         JOIN monk m ON n.author_id = m.id
         JOIN node_type nt ON n.node_type_id = nt.id
+        JOIN node r ON r.id = (subpath(n.path, 0, 1))::text::bigint
+        JOIN node_type s ON s.id = r.node_type_id
         WHERE websearch_to_tsquery('english', ?) @@
               (setweight(to_tsvector('english', n.doctext), 'A') ||
                setweight(to_tsvector('english', n.title), 'B'))

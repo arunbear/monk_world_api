@@ -64,7 +64,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
         link_meta       => $sitemap->{_links}{search},
         with_auth_token => false,
     )
-    ->update_form_entries(
+        ->update_form_entries(
         q => 'Best Practices',
     );
     my $tx = $t->ua->build_tx($req->tx_args);
@@ -83,8 +83,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
                 'created_at'      => re($expected_time),
                 'doctext'         => '"Perl Best Practices" by Damian Conway is a must-read for any serious Perl programmer.',
                 'id'              => $self->{node_store}{'reply.Book recommendations'}{id},
-                'node_type_id'    => 11,
-                'node_type_name'  => 'note',
+                section_name      => 'Section_1',
                 'title'           => 'reply.Book recommendations'
             },
             {
@@ -92,8 +91,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
                 'created_at'      => re($expected_time),
                 'doctext'         => 'Always use strict and warnings in your Perl code to catch common mistakes.',
                 'id'              => $self->{node_store}{'Best Practices'}{id},
-                'node_type_id'    => 2,
-                'node_type_name'  => 'Section_2',
+                section_name      => 'Section_2',
                 'title'           => 'Best Practices'
             }
         ]
