@@ -9,11 +9,25 @@ has search_model => sub ($self) {
 };
 
 sub index ($self) {
-    my $q = $self->param('q');
-    my $limit = $self->param('limit') // 50;
-    my $after = $self->param('after');
+    my $validation = $self->validation;
+    $validation->optional('q')->size(1, 100);
+    $validation->optional('limit')->num(1, 50);
+    $validation->optional('after')->num(0, undef);
 
-    $limit = $limit > 50 ? 50 : $limit;  # Enforce maximum limit
+    if ($validation->has_error) {
+        my %errors = map { $_ => [$validation->error($_)] } $validation->failed->@*;
+        return $self->render(
+            status => 400,
+            json   => {
+                error => 'Invalid parameters',
+                details => \%errors
+            }
+        );
+    }
+
+    my $q     = $validation->param('q');
+    my $limit = $validation->param('limit');
+    my $after = $validation->param('after');
 
     my $results = $self->search_model->search($q,
         ($limit ? (limit => $limit) : ()),
