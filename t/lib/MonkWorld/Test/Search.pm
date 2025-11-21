@@ -35,7 +35,7 @@ sub teardown :Tests(teardown) ($self) {
     $self->pg->db->query('TRUNCATE note, node');
 }
 
-sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
+sub nodes_can_be_searched_by_content :Test(18) ($self) {
     my $t = $self->mojo;
 
     $self->_create_test_threads();
@@ -80,7 +80,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
     cmp_deeply $result, $expected_json, or diag explain $result;
 }
 
-sub searches_can_be_limited_by_number :Test(no_plan) ($self) {
+sub searches_can_be_limited_by_number :Test(18) ($self) {
     my $t = $self->mojo;
 
     $self->_create_test_threads();
