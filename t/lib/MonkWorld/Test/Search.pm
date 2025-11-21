@@ -38,26 +38,7 @@ sub teardown :Tests(teardown) ($self) {
 sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
     my $t = $self->mojo;
 
-    $self->_create_thread(
-        $self->{section_1}{id},
-        'Book recommendations',
-        [],
-        [
-            'The book "Modern Perl" by chromatic is a great introduction to modern Perl practices.',
-            '"Perl Best Practices" by Damian Conway is a must-read for any serious Perl programmer.',
-            '"Higher-Order Perl" by Mark Jason Dominus explores advanced functional programming in Perl.'
-        ]
-    );
-    $self->_create_thread(
-        $self->{section_2}{id},
-        'Best Practices',
-        [],
-        [
-            'Always use strict and warnings in your Perl code to catch common mistakes.',
-            'Use meaningful variable names and include POD documentation for all subroutines.',
-            'Write tests for your code and follow the principle of least surprise.'
-        ]
-    );
+    $self->_create_test_threads();
 
     my $sitemap = $self->get_sitemap;
     my $req = MonkWorld::API::Request->new(
@@ -102,26 +83,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
 sub searches_can_be_limited_by_number :Test(no_plan) ($self) {
     my $t = $self->mojo;
 
-    $self->_create_thread(
-        $self->{section_1}{id},
-        'Book recommendations',
-        [],
-        [
-            'The book "Modern Perl" by chromatic is a great introduction to modern Perl practices.',
-            '"Perl Best Practices" by Damian Conway is a must-read for any serious Perl programmer.',
-            '"Higher-Order Perl" by Mark Jason Dominus explores advanced functional programming in Perl.'
-        ]
-    );
-    $self->_create_thread(
-        $self->{section_2}{id},
-        'Best Practices',
-        [],
-        [
-            'Always use strict and warnings in your Perl code to catch common mistakes.',
-            'Use meaningful variable names and include POD documentation for all subroutines.',
-            'Write tests for your code and follow the principle of least surprise.'
-        ]
-    );
+    $self->_create_test_threads();
 
     my $sitemap = $self->get_sitemap;
     my $req = MonkWorld::API::Request->new(
@@ -169,4 +131,26 @@ sub searches_can_be_limited_by_number :Test(no_plan) ($self) {
     ]
     ;
     cmp_deeply $result, $expected_json, or diag explain $result;
+}
+sub _create_test_threads ($self) {
+    $self->_create_thread(
+        $self->{section_1}{id},
+        'Book recommendations',
+        [],
+        [
+            q{The book "Modern Perl" by chromatic is a great introduction to modern Perl practices.},
+            q{"Perl Best Practices" by Damian Conway is a must-read for any serious Perl programmer.},
+            q{"Higher-Order Perl" by Mark Jason Dominus explores advanced functional programming in Perl.}
+        ]
+    );
+    $self->_create_thread(
+        $self->{section_2}{id},
+        'Best Practices',
+        [],
+        [
+            'Always use strict and warnings in your Perl code to catch common mistakes.',
+            'Use meaningful variable names and include POD documentation for all subroutines.',
+            'Write tests for your code and follow the principle of least surprise.'
+        ]
+    );
 }
