@@ -146,7 +146,7 @@ sub searches_can_start_from_a_specific_node :Test(18) ($self) {
     ->update_form_entries(
         q => 'Practices',
         limit => 2,
-        start => $self->{node_store}{'reply.reply.Best Practices'}{id},
+        after => $self->{node_store}{'reply.reply.Best Practices'}{id},
     );
     my $tx = $t->ua->build_tx($req->tx_args);
 
