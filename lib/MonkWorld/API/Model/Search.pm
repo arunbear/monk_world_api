@@ -2,14 +2,11 @@ package MonkWorld::API::Model::Search;
 use v5.40;
 use Data::Dump 'dump';
 use Mojo::Base 'MonkWorld::API::Model::Base', -signatures;
-use Mojo::JSON qw(encode_json decode_json);
+use Mojo::Util qw(trim);
 
 sub search ($self, $query) {
     $self->log->debug("Searching for: $query");
-    # Clean and prepare the search query
-    $query =~ s/[^\w\s]//g;  # Remove special characters
-    $query =~ s/\s+/ /g;      # Collapse multiple spaces
-    $query =~ s/^\s+|\s+$//g; # Trim spaces
+    $query = trim($query);
 
     return [] unless $query;
 
@@ -28,12 +25,12 @@ sub search ($self, $query) {
         JOIN node r ON r.id = (subpath(n.path, 0, 1))::text::bigint
         JOIN node_type s ON s.id = r.node_type_id
         WHERE websearch_to_tsquery('english', ?) @@
-              (setweight(to_tsvector('english', n.doctext), 'A') ||
-               setweight(to_tsvector('english', n.title), 'B'))
+              (setweight(to_tsvector('english', n.title), 'A') ||
+               setweight(to_tsvector('english', n.doctext), 'B'))
         ORDER BY
             ts_rank(
-                setweight(to_tsvector('english', n.doctext), 'A') ||
-                setweight(to_tsvector('english', n.title), 'B'),
+                setweight(to_tsvector('english', n.title), 'A') ||
+                setweight(to_tsvector('english', n.doctext), 'B'),
                 websearch_to_tsquery('english', ?)
             ) DESC,
             n.created_at DESC

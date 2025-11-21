@@ -71,7 +71,7 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
 
     note "Main tests ...";
     $t->request_ok($tx)
-        ->status_is(HTTP_OK);
+      ->status_is(HTTP_OK);
 
     my $result = $tx->res->json;
     my $expected_time = localtime->strftime('%Y-%m-%d %H:%M'); # Pg timestamp might be a second off
@@ -82,18 +82,18 @@ sub nodes_can_be_searched_by_content :Test(no_plan) ($self) {
                 'author_username' => 'Anonymous Monk',
                 author_id         => $self->anonymous_user_id,
                 'created_at'      => re($expected_time),
-                'id'              => $self->{node_store}{'reply.Book recommendations'}{id},
-                section_name      => 'Section_1',
-                'title'           => 'reply.Book recommendations'
+                'id'              => $self->{node_store}{'Best Practices'}{id},
+                section_name      => 'Section_2',
+                'title'           => 'Best Practices'
             },
             {
                 'author_username' => 'Anonymous Monk',
                 author_id         => $self->anonymous_user_id,
                 'created_at'      => re($expected_time),
-                'id'              => $self->{node_store}{'Best Practices'}{id},
-                section_name      => 'Section_2',
-                'title'           => 'Best Practices'
-            }
+                'id'              => $self->{node_store}{'reply.Book recommendations'}{id},
+                section_name      => 'Section_1',
+                'title'           => 'reply.Book recommendations'
+            },
         ]
     ;
     cmp_deeply $result, $expected_json, or diag explain $result;
