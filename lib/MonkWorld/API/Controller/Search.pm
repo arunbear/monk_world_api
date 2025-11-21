@@ -10,8 +10,10 @@ has search_model => sub ($self) {
 
 sub index ($self) {
     my $q = $self->param('q');
+    my $limit = $self->param('limit') // 50;
+    $limit = $limit > 50 ? 50 : $limit;  # Enforce maximum limit
 
-    my $results = $self->search_model->search($q);
+    my $results = $self->search_model->search($q, $limit);
 
     return $self->render(
         json => $results

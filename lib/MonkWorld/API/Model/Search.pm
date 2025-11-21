@@ -4,14 +4,17 @@ use Data::Dump 'dump';
 use Mojo::Base 'MonkWorld::API::Model::Base', -signatures;
 use Mojo::Util qw(trim);
 
-sub search ($self, $query) {
-    $self->log->debug("Searching for: $query");
+sub search ($self, $query, $limit = 50) {
+    $self->log->debug("Searching for: $query with limit: $limit");
     $query = trim($query);
 
     return [] unless $query;
 
+    # Enforce maximum limit
+    $limit = 50 if $limit > 50;
+
     # Use PostgreSQL full-text search with websearch_to_tsquery
-    my $results = $self->pg->db->query(<<~'SQL', $query, $query)->hashes->to_array;
+    my $results = $self->pg->db->query(<<~"SQL", $query, $query, $limit)->hashes->to_array;
         SELECT
             n.id,
             n.title,
@@ -34,6 +37,7 @@ sub search ($self, $query) {
                 setweight(to_tsvector('english', n.doctext), 'B'),
                 websearch_to_tsquery('english', ?)
             ) DESC
+        LIMIT ?
     SQL
 
     $self->log->debug("Search results: " . dump($results));
