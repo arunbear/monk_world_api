@@ -28,12 +28,12 @@ sub search ($self, $query) {
               (setweight(to_tsvector('english', n.title), 'A') ||
                setweight(to_tsvector('english', n.doctext), 'B'))
         ORDER BY
+            n.id DESC,
             ts_rank(
                 setweight(to_tsvector('english', n.title), 'A') ||
                 setweight(to_tsvector('english', n.doctext), 'B'),
                 websearch_to_tsquery('english', ?)
-            ) DESC,
-            n.created_at DESC
+            ) DESC
     SQL
 
     $self->log->debug("Search results: " . dump($results));
