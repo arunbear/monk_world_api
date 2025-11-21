@@ -15,7 +15,10 @@ sub index ($self) {
 
     $limit = $limit > 50 ? 50 : $limit;  # Enforce maximum limit
 
-    my $results = $self->search_model->search($q, $limit, $after);
+    my $results = $self->search_model->search($q, 
+        limit => $limit,
+        ($after ? (after => $after) : ())
+    );
 
     return $self->render(
         json => $results

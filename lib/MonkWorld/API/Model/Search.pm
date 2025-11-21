@@ -4,7 +4,10 @@ use Data::Dump 'dump';
 use Mojo::Base 'MonkWorld::API::Model::Base', -signatures;
 use Mojo::Util qw(trim);
 
-sub search ($self, $query, $limit = 50, $after = undef) {
+sub search ($self, $query, %params) {
+    my $limit = $params{limit} // 50;
+    my $after = $params{after};
+    
     $self->log->debug("Searching for: $query with limit: $limit" . ($after ? " after ID: $after" : ''));
     $query = trim($query);
 
