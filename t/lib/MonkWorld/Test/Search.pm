@@ -17,6 +17,8 @@ sub schema {'threads_test'}
 sub startup :Tests(startup) ($self) {
     $self->pg->db->insert('node_type', { id => NODE_TYPE_NOTE, name => 'note' });
 
+    $self->{node_store} = {}; # store nodes by title, otherwise we'd have to use specific IDs in the tests
+
     $self->{section_1} = $self->pg->db->insert(
         'node_type',
         { name => 'Section_1' },
@@ -27,14 +29,18 @@ sub startup :Tests(startup) ($self) {
         { name => 'Section_2' },
         { returning => [ qw(id name) ] }
     )->hash;
-    $self->{node_store} = {}; # store nodes by title
+    $self->{section_3} = $self->pg->db->insert(
+        'node_type',
+        { name => 'Section_3' },
+        { returning => [ qw(id name) ] }
+    )->hash;
 }
 
 sub teardown :Tests(teardown) ($self) {
     $self->pg->db->query('TRUNCATE note, node');
 }
 
-sub nodes_can_be_searched_by_content :Test(18) ($self) {
+sub nodes_can_be_searched_by_content :Test(25) ($self) {
     my $t = $self->mojo;
 
     $self->_create_test_threads();
@@ -79,7 +85,7 @@ sub nodes_can_be_searched_by_content :Test(18) ($self) {
     cmp_deeply $result, $expected_json, or diag explain $result;
 }
 
-sub content_can_be_searched_using_web_search_operators :Test(18) ($self) {
+sub content_can_be_searched_using_web_search_operators :Test(25) ($self) {
     $self->_create_test_threads();
 
     my $sitemap = $self->get_sitemap;
@@ -129,7 +135,7 @@ sub content_can_be_searched_using_web_search_operators :Test(18) ($self) {
     cmp_deeply $result, $expected_json, or explain $result;
 }
 
-sub searches_can_be_limited_by_number :Test(18) ($self) {
+sub searches_can_be_limited_by_number :Test(25) ($self) {
     my $t = $self->mojo;
 
     $self->_create_test_threads();
@@ -182,7 +188,7 @@ sub searches_can_be_limited_by_number :Test(18) ($self) {
     cmp_deeply $result, $expected_json, or diag explain $result;
 }
 
-sub searches_can_start_from_a_specific_node :Test(18) ($self) {
+sub searches_can_start_from_a_specific_node :Test(25) ($self) {
     my $t = $self->mojo;
 
     $self->_create_test_threads();
@@ -247,6 +253,16 @@ sub _create_test_threads ($self) {
             'Always use strict and warnings in your Perl code to catch common mistakes.',
             'Use meaningful variable names and include POD documentation for all subroutines.',
             'Write tests for your code and follow the principle of least surprise.'
+        ]
+    );
+    $self->_create_thread(
+        $self->{section_3}{id}, # test section inclusion and exclusion
+        'Aprendo Español',
+        [],
+        [
+            'Hola, estoy aprendiendo español. Me gusta mucho la cultura hispana y su rica historia.',
+            '¿Podrías recomendarme algunos libros para mejorar mi vocabulario?',
+            '¡Claro! Te sugiero empezar con lecturas sencillas como cuentos cortos o artículos de periódicos en español.'
         ]
     );
 }
