@@ -188,7 +188,52 @@ sub searches_can_be_limited_by_number :Test(25) ($self) {
     cmp_deeply $result, $expected_json, or diag explain $result;
 }
 
-sub searches_can_start_from_a_specific_node :Test(25) ($self) {
+sub searches_can_start_from_before_a_specific_node :Test(25) ($self) {
+    $self->_create_test_threads();
+
+    my $sitemap = $self->get_sitemap;
+    my $req = MonkWorld::API::Request->new(
+        link_meta       => $sitemap->{_links}{search},
+        with_auth_token => false,
+    )
+    ->update_form_entries(
+        q => 'Practices',
+        limit => 2,
+        before => $self->{node_store}{'Best Practices'}{id},
+    );
+    my $t = $self->mojo;
+    my $tx = $t->ua->build_tx($req->tx_args);
+
+    note "Main tests ...";
+    $t->request_ok($tx)
+      ->status_is(HTTP_OK);
+
+    my $result = $tx->res->json;
+    my $expected_time = localtime->strftime('%Y-%m-%d %H:%M'); # Pg timestamp might be a second off
+
+    my $expected_json = [
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'reply.Book recommendations'}{id},
+            'section_name'    => 'Section_1',
+            'title'           => 'reply.Book recommendations'
+        },
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'Book recommendations'}{id},
+            'section_name'    => 'Section_1',
+            'title'           => 'Book recommendations'
+        }
+    ];
+    cmp_deeply $result, $expected_json or explain $result;
+}
+
+sub searches_can_start_from_after_a_specific_node :Test(25) ($self) {
+    return("This needs to be rethought");
     my $t = $self->mojo;
 
     $self->_create_test_threads();

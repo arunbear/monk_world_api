@@ -13,6 +13,8 @@ sub index ($self) {
     $validation->optional('q')->size(1, 100);
     $validation->optional('limit')->num(1, 50);
     $validation->optional('after')->num(0, undef);
+    $validation->optional('before')->num(0, undef);
+    $validation->optional('dir')->in(qw(up down));
 
     if ($validation->has_error) {
         my %errors = map { $_ => [$validation->error($_)] } $validation->failed->@*;
@@ -25,13 +27,18 @@ sub index ($self) {
         );
     }
 
-    my $q     = $validation->param('q');
-    my $limit = $validation->param('limit');
-    my $after = $validation->param('after');
+    my $q      = $validation->param('q');
+    my $limit   = $validation->param('limit');
+    my $after   = $validation->param('after');
+    my $before  = $validation->param('before');
+    my $dir     = $validation->param('dir');
 
-    my $results = $self->search_model->search($q,
-        ($limit ? (limit => $limit) : ()),
-        ($after ? (after => $after) : ())
+    my $results = $self->search_model->search(
+        $q,
+        ($dir    ? (dir => $dir)      : ()),
+        ($limit  ? (limit => $limit)  : ()),
+        ($after  ? (after => $after)  : ()),
+        ($before ? (before => $before) : ())
     );
 
     return $self->render(
