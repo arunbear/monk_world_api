@@ -1,11 +1,10 @@
 package MonkWorld::Test::Search;
 
 use v5.40;
-use HTTP::Status qw(HTTP_OK HTTP_CREATED);
-use MonkWorld::API::Constants qw(NODE_TYPE_NOTE NODE_TYPE_PERLQUESTION);
+use HTTP::Status qw(HTTP_OK);
+use MonkWorld::API::Constants qw(NODE_TYPE_NOTE);
 use MonkWorld::API::Request;
 use Time::Piece;
-use Time::Seconds qw(ONE_DAY);
 use Role::Tiny::With;
 
 use Test::Class::Most
@@ -78,6 +77,56 @@ sub nodes_can_be_searched_by_content :Test(18) ($self) {
         ]
     ;
     cmp_deeply $result, $expected_json, or diag explain $result;
+}
+
+sub content_can_be_searched_using_web_search_operators :Test(18) ($self) {
+    $self->_create_test_threads();
+
+    my $sitemap = $self->get_sitemap;
+    my $req = MonkWorld::API::Request->new(
+        link_meta       => $sitemap->{_links}{search},
+        with_auth_token => false,
+    )
+    ->update_form_entries(
+        q => q{ "Best Practices" OR Perl -functional },
+    );
+    my $t = $self->mojo;
+    my $tx = $t->ua->build_tx($req->tx_args);
+
+    note "Testing web search operators...";
+    $t->request_ok($tx)
+      ->status_is(HTTP_OK);
+
+    my $result = $tx->res->json;
+    my $expected_time = localtime->strftime('%Y-%m-%d %H:%M');
+
+    my $expected_json = [
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'Best Practices'}{id},
+            section_name      => 'Section_2',
+            'title'           => 'Best Practices'
+        },
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'reply.Book recommendations'}{id},
+            'section_name'    => 'Section_1',
+            'title'           => 'reply.Book recommendations'
+        },
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'Book recommendations'}{id},
+            'section_name'    => 'Section_1',
+            'title'           => 'Book recommendations'
+        }
+    ];
+    cmp_deeply $result, $expected_json, or explain $result;
 }
 
 sub searches_can_be_limited_by_number :Test(18) ($self) {
