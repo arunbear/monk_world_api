@@ -2,56 +2,29 @@ package MonkWorld::API::Model::Search;
 use v5.40;
 use Data::Dump 'dump';
 use DBIx::PreQL;
-use Mojo::Base 'MonkWorld::API::Model::Base', -signatures;
+use Mojo::Base 'MonkWorld::API::Model::Base';
 use Mojo::Util qw(trim);
 
 sub search ($self, $query, %params) {
     my $limit = $params{limit} // 50;
     my $sort  = $params{sort} // 'down';
 
-    my $after  = $params{after} // -1;
-    my $before = $params{before};
     my $include_sections = $params{include_sections} // [];
     my $exclude_sections = $params{exclude_sections} // [];
 
     $self->log->debug("Searching for: $query with parameters: " . (dump %params));
     $query = trim($query);
-
     return [] unless $query;
 
-    # Enforce maximum limit
-    $limit = 50 if $limit > 50;
+    $limit = 50 if $limit > 50; # Enforce maximum limit
     my %data = (
-        limit => $limit,
-        query => $query,
+        limit  => $limit,
+        query  => $query,
+        before => $params{before},
+        after  => $params{after},
+        sql_ord => \($sort eq 'down' ? 'DESC' : 'ASC'),
     );
 
-    # simplify paging in SQL query
-    my $boundary = do {
-        if ($sort eq 'down') {
-            if (!defined $before) {
-                # use a value larger than any existing node ID
-                $before =
-                    $self->pg->db->query('SELECT COALESCE(MAX(id), 0)::bigint as max_id FROM node')
-                        ->hash
-                        ->{max_id} + 1;
-            }
-            $before;
-        }
-        elsif ($sort eq 'up') {
-            $after;
-        }
-    };
-
-    # Use PostgreSQL full-text search with websearch_to_tsquery
-    my $sql_incl_sections = '';
-    if (@$include_sections) {
-        $sql_incl_sections = sprintf q{AND s.id IN (%s)}, join(',' => ('?') x @$include_sections);
-    }
-
-    $data{sql_ord} = \($sort eq 'down' ? 'DESC' : 'ASC');
-    $data{before}  = $before;
-    $data{after}   = $after;
     if ($include_sections->@*) {
         $data{sections_in} = $include_sections;
     }
