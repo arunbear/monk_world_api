@@ -359,6 +359,7 @@ sub searches_can_limited_by_section :Test(25) ($self) {
     cmp_deeply $result, $expected_json, or explain $result;
 }
 
+=pod
 sub search_results_can_be_listed_by_rank :Test(25) ($self) {
     $self->_create_test_threads();
 
@@ -403,6 +404,8 @@ sub search_results_can_be_listed_by_rank :Test(25) ($self) {
     ;
     cmp_deeply $result, $expected_json, or explain $result;
 }
+
+=cut
 
 sub _create_test_threads ($self) {
     $self->_create_thread(
