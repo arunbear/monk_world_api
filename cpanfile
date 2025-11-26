@@ -1,4 +1,5 @@
 requires 'Devel::Assert', '1.06';
+requires 'DBIx::PreQL', '0.01.00';
 requires 'HTTP::Message', '7.01';
 requires 'Mojo::Pg', '4.28';
 requires 'Moo', '2.005005';
