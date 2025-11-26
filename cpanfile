@@ -1,5 +1,6 @@
+requires 'Data::Dump', '1.25';
 requires 'Devel::Assert', '1.06';
-requires 'DBIx::PreQL', '0.01.00';
+requires 'DBIx::PreQL';
 requires 'HTTP::Message', '7.01';
 requires 'Mojo::Pg', '4.28';
 requires 'Moo', '2.005005';
@@ -11,5 +12,4 @@ requires 'Type::Tiny', '2.008004';
 on 'test' => sub {
   requires 'Test::Class::Most', '0.08';
   requires 'Test::Lib', '0.003';
-  requires 'Sub::Override', '0.12';
 };
