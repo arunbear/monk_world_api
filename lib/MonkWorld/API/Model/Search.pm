@@ -12,6 +12,7 @@ sub search ($self, $query, %params) {
     my $after  = $params{after} // -1;
     my $before = $params{before};
     my $include_sections = $params{include_sections} // [];
+    my $exclude_sections = $params{exclude_sections} // [];
 
     $self->log->debug("Searching for: $query with parameters: " . (dump %params));
     $query = trim($query);
@@ -54,6 +55,9 @@ sub search ($self, $query, %params) {
     if ($include_sections->@*) {
         $data{sections_in} = $include_sections;
     }
+    if ($exclude_sections->@*) {
+        $data{sections_not_in} = $exclude_sections;
+    }
 
     my $template = <<~'SQL';
     *   SELECT
@@ -75,6 +79,7 @@ sub search ($self, $query, %params) {
     &   AND n.id < ?before?
     &   AND n.id > ?after?
     &   AND ARRAY[s.id] <@ ?@sections_in?
+    &   AND NOT ARRAY[s.id] <@ ?@sections_not_in?
     *   ORDER BY
     *       n.id ?sql_ord?
     *   LIMIT ?limit?

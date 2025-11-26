@@ -316,7 +316,7 @@ sub searches_can_start_from_after_a_specific_node :Test(25) ($self) {
     cmp_deeply $result, $expected_json, or explain $result;
 }
 
-sub searches_can_limited_by_section :Test(25) ($self) {
+sub searches_can_be_limited_by_section :Test(25) ($self) {
     $self->_create_test_threads();
 
     my $sitemap = $self->get_sitemap;
@@ -354,6 +354,57 @@ sub searches_can_limited_by_section :Test(25) ($self) {
             'id'              => $self->{node_store}{'Book recommendations'}{id},
             'section_name'    => 'Section_1',
             'title'           => 'Book recommendations'
+        }
+    ];
+    cmp_deeply $result, $expected_json, or explain $result;
+}
+
+sub searches_can_skip_certain_sections :Test(25) ($self) {
+    $self->_create_test_threads();
+
+    my $sitemap = $self->get_sitemap;
+    my $req = MonkWorld::API::Request->new(
+        link_meta       => $sitemap->{_links}{search},
+        with_auth_token => false,
+    )
+    ->update_form_entries(
+        q => 'test',
+        xs => [$self->{Section_1}{id}, $self->{Section_2}{id}],
+    );
+    my $t = $self->mojo;
+    my $tx = $t->ua->build_tx($req->tx_args);
+
+    note "Start main tests ...";
+    $t->request_ok($tx)
+      ->status_is(HTTP_OK);
+
+    my $result = $tx->res->json;
+    my $expected_time = localtime->strftime('%Y-%m-%d %H:%M'); # Pg timestamp might be a second off
+
+    my $expected_json = [
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'reply.reply.Other Testing Frameworks'}{id},
+            'section_name'    => 'Section_3',
+            'title'           => 'reply.reply.Other Testing Frameworks'
+        },
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'reply.Other Testing Frameworks'}{id},
+            'section_name'    => 'Section_3',
+            'title'           => 'reply.Other Testing Frameworks'
+        },
+        {
+            'author_id'       => $self->anonymous_user_id,
+            'author_username' => 'Anonymous Monk',
+            'created_at'      => re($expected_time),
+            'id'              => $self->{node_store}{'Other Testing Frameworks'}{id},
+            'section_name'    => 'Section_3',
+            'title'           => 'Other Testing Frameworks'
         }
     ];
     cmp_deeply $result, $expected_json, or explain $result;

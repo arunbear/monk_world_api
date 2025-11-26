@@ -15,7 +15,8 @@ sub index ($self) {
     $validation->optional('after')->num(0, undef);
     $validation->optional('before')->num(0, undef);
     $validation->optional('sort')->in(qw(up down));
-    $validation->optional('os')->num(0, undef); # include sections
+    $validation->optional('os')->num(0, undef); # only some sections
+    $validation->optional('xs')->num(0, undef); # exclude sections
 
     if ($validation->has_error) {
         my %errors = map { $_ => [$validation->error($_)] } $validation->failed->@*;
@@ -34,6 +35,7 @@ sub index ($self) {
     my $before  = $validation->param('before');
     my $sort    = $validation->param('sort');
     my $include_sections = $validation->every_param('os');
+    my $exclude_sections = $validation->every_param('xs');
 
     my $results = $self->search_model->search(
         $q,
@@ -41,7 +43,8 @@ sub index ($self) {
         ($limit     ? (limit => $limit)     : ()),
         ($after     ? (after => $after)     : ()),
         ($before    ? (before => $before)   : ()),
-        (@$include_sections ? (include_sections => $include_sections) : ())
+        (@$include_sections ? (include_sections => $include_sections) : ()),
+        (@$exclude_sections ? (exclude_sections => $exclude_sections) : ()),
     );
 
     return $self->render(
