@@ -22,3 +22,14 @@ sub create ($self, $node_type_data) {
     }
     return $collection;
 }
+
+sub get_all ($self) {
+    my $db = $self->pg->db;
+    my $result = $db->select(
+        $self->table_name,
+        ['id', 'name'],
+        {},
+        { order_by => 'name' }
+    );
+    return $result->hashes->to_array;
+}

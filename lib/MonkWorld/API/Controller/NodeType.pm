@@ -1,7 +1,7 @@
 package MonkWorld::API::Controller::NodeType;
 use v5.40;
 use Mojo::Base 'Mojolicious::Controller', -signatures;
-use HTTP::Status qw(HTTP_BAD_REQUEST HTTP_CREATED HTTP_CONFLICT);
+use HTTP::Status qw(HTTP_BAD_REQUEST HTTP_CREATED HTTP_CONFLICT HTTP_OK);
 use MonkWorld::API::Model::NodeType;
 
 has node_type_model => sub ($self) {
@@ -39,5 +39,18 @@ sub create ($self) {
     $self->render(
         json   => $node_type,
         status => HTTP_CREATED
+    );
+}
+
+sub index ($self) {
+    my $node_types = $self->node_type_model->get_all;
+
+    $self->render(
+        json => {
+            _links => {
+                self => { href => $self->req->url->to_abs->path }
+            },
+            node_types => $node_types
+        },
     );
 }

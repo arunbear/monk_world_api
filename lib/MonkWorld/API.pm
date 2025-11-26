@@ -34,6 +34,7 @@ sub startup ($self) {
   $r->get('/thread/:id')->to('Node#get')->name('get_thread');
   $r->get('/threads')->to('Threads#index')->name('get_threads');
   $r->get('/search')->to('Search#index')->name('search');
+  $r->get('/sections')->to('NodeType#index')->name('get_all_sections');
 
   # Protected routes
   my $auth = $r->under(sub ($c) {

@@ -65,6 +65,10 @@ sub index ($self) {
                     q => 'QUERY',
                 }
             },
+            get_all_sections => {
+                href => $self->url_for('get_all_sections'),
+                method => 'GET',
+            },
         },
     });
 }

@@ -1,7 +1,7 @@
 package MonkWorld::Test::NodeType;
 
 use v5.40;
-use HTTP::Status qw(HTTP_CREATED);
+use HTTP::Status qw(HTTP_CREATED HTTP_OK);
 use Mojo::Pg;
 use Mojo::URL;
 use Test::Mojo;
@@ -63,13 +63,9 @@ sub a_node_type_can_be_created : Test(2) ($self) {
 }
 
 sub a_node_type_cannot_be_created_if_name_exists : Test(6) ($self) {
-    my $t = $self->mojo;
-
-    my $auth_token = $ENV{MONKWORLD_AUTH_TOKEN}
-        or return('Expected MONKWORLD_AUTH_TOKEN in %ENV');
-
     my $node_type_name = 'test_node_type';
 
+    my $t = $self->mojo;
     my $sitemap = $t->get_ok('/')->tx->res->json;
 
     # First, create a node type
@@ -90,4 +86,49 @@ sub a_node_type_cannot_be_created_if_name_exists : Test(6) ($self) {
     $t->request_ok($tx2)
       ->status_is(HTTP::Status::HTTP_CONFLICT)
       ->json_like('/error' => qr/already exists/);
+}
+
+sub the_collection_of_all_node_types_can_be_retrieved : Test(4) ($self) {
+    # create some node types
+    foreach my $n (1 .. 2) {
+        my $section = "Section_$n";
+        $self->{$section} = $self->pg->db->insert(
+            'node_type',
+            { name => $section, id => $n },
+            { returning => [ qw(id name) ] }
+        )->hash;
+    }
+
+    my $t = $self->mojo;
+    my $sitemap = $t->get_ok('/')->tx->res->json;
+
+    # First, create a node type
+    my $req = MonkWorld::API::Request
+        ->new(link_meta => $sitemap->{_links}{get_all_sections})
+        ;
+
+    my $tx = $t->ua->build_tx($req->tx_args);
+
+    $t->request_ok($tx)
+      ->status_is(HTTP_OK);
+    my $result = $t->tx->res->json;
+
+    my $expected_json = {
+        _links => {
+            self => {
+                href => '/sections'
+            }
+        },
+        node_types => [
+            {
+                id   => 1,
+                name => 'Section_1'
+            },
+            {
+                id   => 2,
+                name => 'Section_2'
+            }
+        ]
+    };
+    eq_or_diff $result, $expected_json;
 }
