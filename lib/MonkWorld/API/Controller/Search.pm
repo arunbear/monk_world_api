@@ -15,7 +15,6 @@ sub index ($self) {
     $validation->optional('after')->num(0, undef);
     $validation->optional('before')->num(0, undef);
     $validation->optional('sort')->in(qw(up down));
-    $validation->optional('rank')->in(qw(y n));
     $validation->optional('os')->num(0, undef); # include sections
 
     if ($validation->has_error) {
@@ -34,13 +33,11 @@ sub index ($self) {
     my $after   = $validation->param('after');
     my $before  = $validation->param('before');
     my $sort    = $validation->param('sort');
-    my $rank    = $validation->param('rank');
     my $include_sections = $validation->every_param('os');
 
     my $results = $self->search_model->search(
         $q,
         ($sort      ? (sort => $sort)       : ()),
-        ($rank      ? (rank => $rank)       : ()),
         ($limit     ? (limit => $limit)     : ()),
         ($after     ? (after => $after)     : ()),
         ($before    ? (before => $before)   : ()),

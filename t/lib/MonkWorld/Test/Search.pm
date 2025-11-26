@@ -359,54 +359,6 @@ sub searches_can_limited_by_section :Test(25) ($self) {
     cmp_deeply $result, $expected_json, or explain $result;
 }
 
-=pod
-sub search_results_can_be_listed_by_rank :Test(25) ($self) {
-    $self->_create_test_threads();
-
-    my $sitemap = $self->get_sitemap;
-    my $req = MonkWorld::API::Request->new(
-        link_meta       => $sitemap->{_links}{search},
-        with_auth_token => false,
-    )
-    ->update_form_entries(
-        q => 'Best Practices',
-        rank => 'y',
-    );
-    my $t = $self->mojo;
-    my $tx = $t->ua->build_tx($req->tx_args);
-
-    note "Main tests ...";
-    $t->request_ok($tx)
-      ->status_is(HTTP_OK);
-
-    my $result = $tx->res->json;
-    my $expected_time = localtime->strftime('%Y-%m-%d %H:%M'); # Pg timestamp might be a second off
-
-    my $expected_json =
-        [
-            {
-                'author_username' => 'Anonymous Monk',
-                author_id         => $self->anonymous_user_id,
-                'created_at'      => re($expected_time),
-                'id'              => $self->{node_store}{'Best Practices'}{id},
-                section_name      => 'Section_2',
-                'title'           => 'Best Practices'
-            },
-            {
-                'author_username' => 'Anonymous Monk',
-                author_id         => $self->anonymous_user_id,
-                'created_at'      => re($expected_time),
-                'id'              => $self->{node_store}{'reply.Book recommendations'}{id},
-                section_name      => 'Section_1',
-                'title'           => 'reply.Book recommendations'
-            },
-        ]
-    ;
-    cmp_deeply $result, $expected_json, or explain $result;
-}
-
-=cut
-
 sub _create_test_threads ($self) {
     $self->_create_thread(
         $self->{Section_1}{id},

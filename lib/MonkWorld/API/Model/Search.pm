@@ -9,13 +9,6 @@ sub search ($self, $query, %params) {
     my $limit = $params{limit} // 50;
     my $sort  = $params{sort} // 'down';
 
-    my $rank  = $params{rank} // 'n';
-    if ($rank eq 'y') {
-        delete @params{qw[before after]}; # these don't make sense with rank
-    }
-    else {
-        $rank = false;
-    }
     my $after  = $params{after} // -1;
     my $before = $params{before};
     my $include_sections = $params{include_sections} // [];
@@ -50,20 +43,9 @@ sub search ($self, $query, %params) {
     };
 
     # Use PostgreSQL full-text search with websearch_to_tsquery
-    my $sql_cmp = $sort eq 'down' ? '<'    : '>';
     my $sql_incl_sections = '';
     if (@$include_sections) {
         $sql_incl_sections = sprintf q{AND s.id IN (%s)}, join(',' => ('?') x @$include_sections);
-    }
-    my $sql_rank = '';
-    my @query_params = ($boundary, @$include_sections, $query, $limit);
-    if ($rank) {
-        splice @query_params, 1, 0, $query;
-        $sql_rank = q{ts_rank(
-                        setweight(to_tsvector('english', n.title), 'A') ||
-                        setweight(to_tsvector('english', n.doctext), 'B'),
-                        websearch_to_tsquery('english', ?)
-                    ) DESC,};
     }
 
     $data{sql_ord} = \($sort eq 'down' ? 'DESC' : 'ASC');
