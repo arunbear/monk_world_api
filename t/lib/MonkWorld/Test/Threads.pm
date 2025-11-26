@@ -140,8 +140,9 @@ sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) (
 
     note "Creation-dated test ...";
     $t->request_ok($tx)
-        ->status_is(HTTP_OK);
+      ->status_is(HTTP_OK);
 
+    my $expected_now_time = localtime->strftime('%Y-%m-%d %H:%M'); # Pg timestamp might be a second off
     my $expected = {
         Section_1 => {
             "$self->{node_store}{Thread_1}{id}" => {
@@ -158,7 +159,7 @@ sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) (
                         reply => {
                             "$self->{node_store}{'reply.reply.Thread_1'}{id}" => {
                                 title => 'reply.reply.Thread_1',
-                                created_at => re($time->date.' '.$time->time),
+                                created_at => re($expected_now_time),
                                 author_id  => $self->anonymous_user_id,
                                 author_username => 'Anonymous Monk',
                             }
