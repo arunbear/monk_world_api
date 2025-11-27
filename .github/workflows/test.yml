@@ -11,7 +11,7 @@ jobs:
     name: Run Perl Tests
     runs-on: ubuntu-latest
     container:
-      image: perl:5.42
+      image: arunbear/monkworld-api-deps:0.001001
       env:
         MONKWORLD_PG_URL: postgresql://test:test@postgres:5432/test
 
@@ -39,15 +39,8 @@ jobs:
         run: |
           perl -v
 
-      - name: Install cpanm
-        run: |
-          curl -L https://cpanmin.us | perl - App::cpanminus
-
-      - name: Install system dependencies
-        run: |
-          apt-get update && apt-get install -y libpq-dev
-
-      - name: Install Perl dependencies
+      # Dependencies are pre-installed in the custom image
+      - name: Verify dependencies
         run: |
           cpanm --installdeps --notest .
 
