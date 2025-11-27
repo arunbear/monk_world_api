@@ -1,3 +1,4 @@
+requires 'perl', '5.42.0';
 requires 'Data::Dump', '1.25';
 requires 'Devel::Assert', '1.06';
 requires 'DBIx::PreQL';
