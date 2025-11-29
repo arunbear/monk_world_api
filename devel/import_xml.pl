@@ -33,9 +33,15 @@ sub process_xml {
 
     if (ref $input eq 'CODE') {
         my $count = 0;
+
         # Process multiple XML files from directory using iterator
         while (my $file = $input->()) {
-            $count += import_node_data(parse_xml($file));
+            if (already_imported($file)) {
+                say "[Skipping] Already imported node: $file" if $OPT{verbose};
+            }
+            else {
+                $count += import_node_data(parse_xml($file));
+            }
             last if defined $OPT{limit} && $count == $OPT{limit};
         }
         say "Nodes imported: $count";
@@ -191,6 +197,21 @@ sub insert_note ($db, $node_data) {
 }
 
 # ====== Utility Functions ======
+
+sub already_imported ($file) {
+    # Extract node ID from filename (assuming format like '12345.xml')
+    my ($node_id) = $file =~ m{([0-9]+)\.xml$}i
+        or die "Could not extract node ID from filename: $file\n";
+
+    return node_exists($node_id);
+}
+
+sub node_exists ($node_id) {
+    my $pg = get_db_connection();
+    my $db = $pg->db;
+    my $result = $db->select('node', ['id'], { id => $node_id });
+    return defined $result->hash;
+}
 
 sub get_input_for_parsing {
     my $file = shift @ARGV
