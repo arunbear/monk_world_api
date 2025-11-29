@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 use v5.40;
+use autodie;
 use feature 'say';
 use feature 'try';
 use Data::Dump 'dump';
@@ -10,7 +11,6 @@ use Mojolicious;
 use Mojo::Pg;
 use Mojo::DOM;
 use Mojo::Util qw(trim);
-use Path::Iterator::Rule;
 use XXX -with => 'Data::Dump';
 use Mojo::UserAgent;
 
@@ -29,27 +29,19 @@ GetOptions(\%OPT,
 process_xml();
 
 sub process_xml {
-    my $input = get_input_for_parsing();
+    my $files = get_input_for_parsing();
+    my $count = 0;
 
-    if (ref $input eq 'CODE') {
-        my $count = 0;
-
-        # Process multiple XML files from directory using iterator
-        while (my $file = $input->()) {
-            if (already_imported($file)) {
-                say "[Skipping] Already imported node: $file" if $OPT{verbose};
-            }
-            else {
-                $count += import_node_data(parse_xml($file));
-            }
-            last if defined $OPT{limit} && $count == $OPT{limit};
+    foreach my $file (@$files) {
+        if (already_imported($file)) {
+            say "[Skipping] Already imported node: $file" if $OPT{verbose};
         }
-        say "Nodes imported: $count";
+        else {
+            $count += import_node_data(parse_xml($file));
+        }
+        last if defined $OPT{limit} && $count == $OPT{limit};
     }
-    else {
-        # Process single XML file
-        import_node_data(parse_xml($input));
-    }
+    say "Nodes imported: $count";
 }
 
 sub parse_xml ($xml_file) {
@@ -218,14 +210,13 @@ sub get_input_for_parsing {
         or die "Error: No XML file or directory specified\n";
 
     if (-d $file) {
-        # Return iterator for XML files from directory
-        my $rule = Path::Iterator::Rule->new;
-        $rule->file->name('*.xml');
-        return $rule->iter($file);
+        chdir $file;
+        no warnings 'numeric';
+        return [sort { $a <=> $b } glob('*.xml')]; # get earliest nodes first
     }
     elsif (-f $file) {
         die "Error: Cannot read file '$file'\n" unless -r $file;
-        return $file;
+        return [$file];
     }
 }
 
