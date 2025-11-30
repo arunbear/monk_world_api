@@ -1,6 +1,7 @@
 package MonkWorld::API::Controller::Monk;
 use v5.40;
-use Mojo::Base 'Mojolicious::Controller', -signatures;
+use Mojo::Base 'Mojolicious::Controller';
+use Mojo::Util 'trim';
 use HTTP::Status qw(HTTP_UNPROCESSABLE_CONTENT HTTP_CREATED HTTP_CONFLICT);
 use MonkWorld::API::Model::Monk;
 
@@ -14,7 +15,7 @@ sub create ($self) {
     my $validator = Mojolicious::Validator->new;
     my $v = $validator->validation;
     $v->input($data);
-    $v->required('username')->like(qr/^[a-zA-Z0-9_]+/)->like(qr/[a-zA-Z0-9_]+$/);
+    $v->required('username', 'not_empty')->like(qr/^\S+/);
     $v->optional('id')->num(1, undef);
 
     if ($v->has_error('username')) {
@@ -31,7 +32,7 @@ sub create ($self) {
     }
 
     my $monk_data = {
-        username => $data->{username},
+        username => trim($data->{username}),
     };
 
     if (exists $data->{id}) {
