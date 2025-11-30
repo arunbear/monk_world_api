@@ -1,9 +1,9 @@
 package MonkWorld::API;
 our $VERSION = 0.001_001;
 use v5.40;
-use Mojo::Base 'Mojolicious', -signatures;
-use Mojo::Pg;
+use Mojo::Base 'Mojolicious';
 use HTTP::Status 'HTTP_UNAUTHORIZED';
+use MonkWorld::API::Pg;
 
 # Add convenience methods to Mojo::Collection
 use Mojo::Util 'monkey_patch';
@@ -13,17 +13,9 @@ monkey_patch 'Mojo::Collection',
 
 # This method will run once at server start
 sub startup ($self) {
-  my $config = $self->plugin('NotYAMLConfig');
+  $self->plugin('NotYAMLConfig');
   $self->configure_logging;
-
-  # Configure the application
-  $self->secrets($config->{secrets});
-
-  # Setup database
-  $self->helper(pg => sub {
-      state $pg = Mojo::Pg->new($ENV{MONKWORLD_PG_URL});
-      return $pg;
-  });
+  $self->set_db_connection;
 
   # Router
   my $r = $self->routes;
@@ -59,4 +51,11 @@ sub configure_logging ($self) {
     my $config = $self->config;
     $self->log->path($config->{logger}{path});
     $self->log->level($config->{logger}{level});
+}
+
+sub set_db_connection ($self) {
+    $self->helper(pg => sub {
+        state $pg = MonkWorld::API::Pg::get_pg();
+        return $pg;
+    });
 }
