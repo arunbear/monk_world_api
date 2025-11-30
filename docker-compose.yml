@@ -3,7 +3,7 @@ services:
     image: postgres:18-alpine
     container_name: monkworld_db
     environment:
-      POSTGRES_DB: monkworld
+      POSTGRES_DB: monkworld_devel
       POSTGRES_USER: monk
       POSTGRES_PASSWORD: monkpass
     ports:
@@ -11,7 +11,25 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U monk -d monkworld"]
+      test: ["CMD-SHELL", "pg_isready -U monk -d monkworld_devel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  testdb:
+    image: postgres:18-alpine
+    container_name: monkworld_test_db
+    environment:
+      POSTGRES_DB: monkworld_test
+      POSTGRES_USER: monk
+      POSTGRES_PASSWORD: monkpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monk -d monkworld_test"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,3 +37,4 @@ services:
 
 volumes:
   postgres_data:
+  test_postgres_data:
