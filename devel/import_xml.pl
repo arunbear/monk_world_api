@@ -1,18 +1,15 @@
 #!/usr/bin/env perl
 use v5.40;
 use autodie;
-use feature 'say';
-use feature 'try';
 use Data::Dump 'dump';
-use Devel::Assert 'on';
 use Getopt::Long;
 use HTTP::Status qw(HTTP_CONFLICT);
 use Mojolicious;
-use Mojo::Pg;
 use Mojo::DOM;
 use Mojo::Util qw(trim);
 use XXX -with => 'Data::Dump';
 use Mojo::UserAgent;
+use MonkWorld::API::Pg;
 
 my %OPT = (
     'use-api' => true,
@@ -221,8 +218,7 @@ sub get_input_for_parsing {
 }
 
 sub get_db_connection {
-    assert $ENV{MONKWORLD_PG_URL} =~ /^postgresql:/;
-    state $pg = Mojo::Pg->new($ENV{MONKWORLD_PG_URL});
+    state $pg = MonkWorld::API::Pg::get_pg();
     return $pg;
 }
 
