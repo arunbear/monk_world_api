@@ -3,12 +3,13 @@ package MonkWorld::API::Model::Threads;
 use v5.40;
 use Mojo::Base 'MonkWorld::API::Model::Base', -signatures;
 
-sub get_threads ($self, $cutoff_interval = '1 day') {
-    my $rows = $self->fetch_threads_rows($cutoff_interval);
+sub get_threads ($self, $interval = '1 day') {
+    my $rows = $self->fetch_threads_rows($interval);
 
     my $result = {};
     my @wanted_fields = qw(title created_at author_username author_id);
 
+    # group rows into a thread hierarchy
     for my $row (@$rows) {
         my $section_key = $row->{section_name};
 
@@ -45,20 +46,25 @@ sub get_threads ($self, $cutoff_interval = '1 day') {
     return $result;
 }
 
-sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
+sub fetch_threads_rows ($self, $interval = '1 day') {
     my $db = $self->pg->db;
 
     # Query notes:
-    # It returns threads that have been entirely created in the $cutoff_interval,
-    # OR any replies created in the $cutoff_interval, plus their ancestors.
+    # It returns threads that have been active in the most recent N day block
     #
-    # The section is derived from the root node's node_type, which is assumed to be the first
-    # segment in the path.
+    # The section is derived from the root node's node_type, which is assumed to be the first segment in the path.
+
     my $rows = $db->query(q{
-          WITH recent AS (
-            SELECT id, path
+          WITH bounds AS (
+            SELECT MAX(created_at::date) AS max_day
             FROM node
-            WHERE created_at >= now() - $1::interval
+          ),
+          recent AS (
+            SELECT n.id, n.path
+            FROM node n, bounds
+            WHERE n.created_at::date
+              BETWEEN bounds.max_day - $1::interval
+                  AND bounds.max_day
           )
           SELECT
             n.id,
@@ -73,8 +79,8 @@ sub fetch_threads_rows ($self, $cutoff_interval = '1 day') {
           JOIN node r ON r.id = (subpath(n.path, 0, 1))::text::bigint
           JOIN node_type s ON s.id = r.node_type_id
           JOIN recent rc ON n.path @> rc.path
-          ORDER BY n.id ASC
-        }, $cutoff_interval
+          ORDER BY n.id
+        }, $interval
     )->hashes->to_array;
 
     return $rows;

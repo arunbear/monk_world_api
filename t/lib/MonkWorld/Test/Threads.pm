@@ -174,48 +174,22 @@ sub recent_replies_can_be_retrieved_along_with_their_ancestors : Test(no_plan) (
     cmp_deeply $result, $expected;
 }
 
-sub nodes_are_not_retrieved_outside_the_cutoff_interval : Test(no_plan) ($self) {
+sub n_days_of_threads_can_be_requested_via_a_request_param : Test(no_plan) ($self) {
     my $t = $self->mojo;
 
     my $time = localtime;
     my $six_days_ago  = ($time - 6 * ONE_DAY);
     my $four_days_ago = ($time - 4 * ONE_DAY);
-    my $two_days_ago  = ($time - 2 * ONE_DAY);
 
     $self->_create_thread(
         $self->{section_1}{id},
         'Thread_1',
-        [ $six_days_ago->datetime, $four_days_ago->datetime, $two_days_ago->datetime ],
+        [ $four_days_ago->datetime, $four_days_ago->datetime, $four_days_ago->datetime ],
     );
-
-    # Get the threads using API::Request
-    my $sitemap = $self->get_sitemap;
-    my $req = MonkWorld::API::Request->new(
-        link_meta => $sitemap->{_links}{get_threads},
-        with_auth_token => false,
-    );
-    my $tx = $t->ua->build_tx($req->tx_args);
-
-    $t->request_ok($tx)
-      ->status_is(HTTP_OK);
-
-    my $expected = { };
-    my $result = $t->tx->res->json;
-    eq_or_diff $result, $expected;
-}
-
-sub the_cutoff_interval_can_be_specified_as_a_request_param : Test(no_plan) ($self) {
-    my $t = $self->mojo;
-
-    my $time = localtime;
-    my $six_days_ago  = ($time - 6 * ONE_DAY); # all of these
-    my $four_days_ago = ($time - 4 * ONE_DAY); # are older than
-    my $two_days_ago  = ($time - 2 * ONE_DAY); # the default date cutoff
-
     $self->_create_thread(
         $self->{section_1}{id},
-        'Thread_1',
-        [ $six_days_ago->datetime, $four_days_ago->datetime, $two_days_ago->datetime ],
+        'Thread_2',
+        [ $six_days_ago->datetime, $six_days_ago->datetime, $six_days_ago->datetime ],
     );
 
     my $sitemap = $self->get_sitemap;
@@ -223,7 +197,7 @@ sub the_cutoff_interval_can_be_specified_as_a_request_param : Test(no_plan) ($se
         link_meta => $sitemap->{_links}{get_threads},
         with_auth_token => false,
     )
-    ->update_form_entries(days => 7);
+    ->update_form_entries(days => 2);
 
     my $tx = $t->ua->build_tx($req->tx_args);
     $t->request_ok($tx)->status_is(HTTP_OK);
@@ -232,7 +206,7 @@ sub the_cutoff_interval_can_be_specified_as_a_request_param : Test(no_plan) ($se
         Section_1 => {
             "$self->{node_store}{Thread_1}{id}" => {
                 title => 'Thread_1',
-                created_at => $six_days_ago->date.' '.$six_days_ago->time,
+                created_at => $four_days_ago->date.' '.$four_days_ago->time,
                 author_id  => $self->anonymous_user_id,
                 author_username => 'Anonymous Monk',
                 reply => {
@@ -244,14 +218,36 @@ sub the_cutoff_interval_can_be_specified_as_a_request_param : Test(no_plan) ($se
                         reply => {
                             "$self->{node_store}{'reply.reply.Thread_1'}{id}" => {
                                 title => 'reply.reply.Thread_1',
-                                created_at => $two_days_ago->date.' '.$two_days_ago->time,
+                                created_at => $four_days_ago->date.' '.$four_days_ago->time,
                                 author_id  => $self->anonymous_user_id,
                                 author_username => 'Anonymous Monk',
                             }
                         }
                     }
                 }
-            }
+            },
+            "$self->{node_store}{Thread_2}{id}" => {
+                title => 'Thread_2',
+                created_at => $six_days_ago->date.' '.$six_days_ago->time,
+                author_id  => $self->anonymous_user_id,
+                author_username => 'Anonymous Monk',
+                reply => {
+                    "$self->{node_store}{'reply.Thread_2'}{id}" => {
+                        title => 'reply.Thread_2',
+                        created_at => $six_days_ago->date.' '.$six_days_ago->time,
+                        author_id  => $self->anonymous_user_id,
+                        author_username => 'Anonymous Monk',
+                        reply => {
+                            "$self->{node_store}{'reply.reply.Thread_2'}{id}" => {
+                                title => 'reply.reply.Thread_2',
+                                created_at => $six_days_ago->date.' '.$six_days_ago->time,
+                                author_id  => $self->anonymous_user_id,
+                                author_username => 'Anonymous Monk',
+                            }
+                        }
+                    }
+                }
+            },
         },
     };
 
