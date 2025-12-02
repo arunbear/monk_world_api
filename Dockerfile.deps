@@ -27,6 +27,12 @@ FROM perl:${PERL_VERSION}
 # Copy installed dependencies from builder
 COPY --from=builder /usr/local /usr/local
 
+# Make MonkWorld::API::Request available to the MonkWorld website app
+WORKDIR /app
+RUN mkdir -p /app/lib/MonkWorld/API
+
+COPY lib/MonkWorld/API/Request.pm /app/lib/MonkWorld/API/
+
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     libpq5 \
