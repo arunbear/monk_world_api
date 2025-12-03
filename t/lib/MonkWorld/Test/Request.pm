@@ -34,6 +34,24 @@ sub when_creating_a_request : Test(4) ($self) {
     is_deeply $json => { id => 1 }, 'it has a JSON payload';
 }
 
+sub uris_are_absolute_when_server_is_set : Test(2) ($self) {
+    my $expected_server = 'https://example.com';
+    my %req_args = (
+        link_meta => {
+            method  => 'POST',
+            href    => '/resource',
+            headers => { },
+        },
+        with_auth_token => false,
+        server => $expected_server,
+    );
+    note 'With args:'; explain \%req_args;
+    my $req = MonkWorld::API::Request->new(%req_args);
+
+    is $req->server => $expected_server, 'it has a server';
+    is $req->href   => "$expected_server/resource", 'it has an absolute URL';
+}
+
 sub auth_tokens_are_optional : Test(1) ($self) {
     my %req_args = (
         link_meta => {

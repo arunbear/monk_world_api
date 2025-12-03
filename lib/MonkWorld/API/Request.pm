@@ -15,7 +15,7 @@ use v5.40;
 use Moo;
 use namespace::autoclean;
 use Storable qw(dclone);
-use Types::Standard qw(Bool Enum HashRef Maybe StrMatch);
+use Types::Standard qw(Bool Enum HashRef Maybe StrMatch Str);
 
 my $HttpMethod = Enum [qw(HEAD GET POST PUT DELETE PATCH)];
 my $NoSpaces = StrMatch[qr/^ [[:^space:]]+ $/x];
@@ -48,6 +48,12 @@ has _link_meta => (
     required => true,
     isa => HashRef,
 );
+has _server => (
+    is => 'ro',
+    init_arg => 'server',
+    reader => 'server',
+    isa => Maybe[Str],
+);
 
 # accessors
 has _method => (
@@ -57,9 +63,14 @@ has _method => (
 );
 has _href => (
     is => 'rw', init_arg => undef,
-    reader => 'href',
     isa => $RelativeUri,
 );
+
+sub href ($self) {
+    my $server = $self->server // '';
+    $server =~ s|/$||;
+    return $server . $self->_href;
+}
 
 has _headers => (
     is => 'rw', init_arg => undef,
