@@ -9,6 +9,7 @@ use Mojo::Util qw(trim);
 use XXX -with => 'Data::Dump';
 use Mojo::UserAgent;
 use MonkWorld::API::Pg;
+use MonkWorld::API::Request;
 
 my %OPT = (
     'use-api' => true,
@@ -38,7 +39,12 @@ sub process_xml {
             $count += import_node_data($node_date);
         }
         catch ($error) {
-            warn "[Skipping] Failed to import node $file: $error\n";
+            if ($error =~ /\[Skipping/) {
+                warn "$error, importing $file";
+            }
+            else {
+                die "[STOPPED] $error, importing $file";
+            }
         }
         last if defined $OPT{limit} && $count == $OPT{limit};
     }
@@ -52,11 +58,11 @@ sub parse_xml ($xml_file) {
 
     # Extract node data
     my $node = $dom->at('node')
-        or die "No node found in XML file $xml_file";
+        or die "[Skipping] No node found in XML file $xml_file";
 
     my %field;
     $field{node_id} = $node->attr('id')
-        or die "Node ID is required: $xml_file";
+        or die "[Skipping] Node ID is required: $xml_file";
 
     for my $attr (qw(title created updated)) {
         $field{$attr} = $node->attr($attr);
@@ -94,7 +100,7 @@ sub import_node_data ($node_data) {
 sub already_imported ($file) {
     # Extract node ID from filename (assuming format like '12345.xml')
     my ($node_id) = $file =~ m{([0-9]+)\.xml$}i
-        or die "Could not extract node ID from filename: $file\n";
+        or die "[Skipping] Could not extract node ID from filename: $file";
 
     return node_exists($node_id);
 }
@@ -126,47 +132,49 @@ sub get_db_connection {
     return $pg;
 }
 
-# ====== API Import Path ======
-
-sub api_ua {
-    state $ua = do {
-        my $ua = Mojo::UserAgent->new;
-        $ua->insecure(1); # allow self-signed during devel
-        $ua;
-    };
-    return $ua;
-}
-
-sub api_base_uri { return $OPT{uri} }
-
-sub api_auth_headers {
-    my $token = $ENV{MONKWORLD_AUTH_TOKEN}
-        or die "MONKWORLD_AUTH_TOKEN is required for API import";
-    return { 'Authorization' => "Bearer $token" };
-}
-
-sub api_post ($path, $json) {
-    my $url = api_base_uri() . $path;
-    my $tx  = api_ua()->build_tx(POST => $url => api_auth_headers() => json => $json);
-    my $res = api_ua()->start($tx)->result;
-    return $res;
+sub import_node_data_via_api ($node_data) {
+    my $rows = 0;
+    ensure_node_type_exists_api($node_data);
+    ensure_author_exists_api($node_data);
+    $rows = insert_node_api($node_data);
+    return $rows;
 }
 
 sub ensure_node_type_exists_api ($node_data) {
-    my $res = api_post('/node-type', {
-        id   => $node_data->{type_id},
-        name => $node_data->{type_name},
-    });
+    my $sitemap = get_sitemap();
+    my $req = MonkWorld::API::Request
+        ->new(
+            link_meta => $sitemap->{_links}{create_node_type},
+            server    => api_base_uri(),
+        )
+        ->update_json_entries(
+            id   => $node_data->{type_id},
+            name => $node_data->{type_name},
+        );
+
+    my $tx = api_ua()->build_tx($req->tx_args);
+    my $res = api_ua()->start($tx)->result;
+
     return 1 if $res->is_success;
     return 1 if $res->code && $res->code == HTTP_CONFLICT; # already exists
     die "create node-type failed: " . ($res->message // $res->to_string);
 }
 
 sub ensure_author_exists_api ($node_data) {
-    my $res = api_post('/monk', {
-        id       => $node_data->{author_id},
-        username => $node_data->{author_username},
-    });
+    my $sitemap = get_sitemap();
+    my $req = MonkWorld::API::Request
+        ->new(
+            link_meta => $sitemap->{_links}{create_monk},
+            server => api_base_uri(),
+        )
+        ->update_json_entries(
+            id       => $node_data->{author_id},
+            username => $node_data->{author_username},
+        );
+
+    my $tx = api_ua()->build_tx($req->tx_args);
+    my $res = api_ua()->start($tx)->result;
+
     return 1 if $res->is_success;
     return 1 if $res->code && $res->code == HTTP_CONFLICT; # already exists
     die "create monk failed: " . ($res->message // $res->to_string);
@@ -177,21 +185,28 @@ sub insert_node_api ($node_data) {
     $node_data->{updated} = $node_data->{created}
         if ($node_data->{updated} // '') eq '0000-00-00 00:00:00';
 
-    my %payload = (
-        node_id      => $node_data->{node_id},
-        node_type_id => $node_data->{type_id},
-        author_id    => $node_data->{author_id},
-        title        => $node_data->{title},
-        doctext      => $node_data->{doctext},
-        created      => $node_data->{created},
-        updated      => $node_data->{updated},
-    );
-    if ($node_data->{type_id} == 11) {
-        $payload{root_node}   = $node_data->{root_node};
-        $payload{parent_node} = $node_data->{parent_node};
-    }
+    my $sitemap = get_sitemap();
+    my $req = MonkWorld::API::Request
+        ->new(
+            link_meta => $sitemap->{_links}{create_node},
+            server => api_base_uri()
+        )
+        ->update_json_entries(
+            node_id      => $node_data->{node_id},
+            node_type_id => $node_data->{type_id},
+            author_id    => $node_data->{author_id},
+            title        => $node_data->{title},
+            doctext      => $node_data->{doctext},
+            created      => $node_data->{created},
+            updated      => $node_data->{updated},
+            (($node_data->{type_id} == 11) ? (
+                root_node   => $node_data->{root_node},
+                parent_node => $node_data->{parent_node}
+            ) : ())
+        );
 
-    my $res = api_post('/node', \%payload);
+    my $tx = api_ua()->build_tx($req->tx_args);
+    my $res = api_ua()->start($tx)->result;
     if ($res->is_success) {
         return 1;
     }
@@ -208,15 +223,22 @@ sub insert_node_api ($node_data) {
     die "create node failed: $err";
 }
 
-sub import_node_data_via_api ($node_data) {
-    my $rows = 0;
-    try {
-        ensure_node_type_exists_api($node_data);
-        ensure_author_exists_api($node_data);
-        $rows = insert_node_api($node_data);
-    } catch ($error) {
-        my $message = "Failed to import node $node_data->{node_id}: $error\n" . dump($node_data);
-        die "[STOPPED] $message";
-    }
-    return $rows;
+sub get_sitemap {
+    state $sitemap = do {
+        my $res = api_ua()->get(api_base_uri())->result;
+        $res->is_success or die "Failed to fetch sitemap: " . $res->message;
+        $res->json;
+    };
+    return $sitemap;
 }
+
+sub api_ua {
+    state $ua = do {
+        my $ua = Mojo::UserAgent->new;
+        $ua->insecure(1); # allow self-signed during devel
+        $ua;
+    };
+    return $ua;
+}
+
+sub api_base_uri { return $OPT{uri} }
