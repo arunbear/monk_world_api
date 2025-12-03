@@ -30,10 +30,15 @@ sub process_xml {
 
     foreach my $file (@$files) {
         if (already_imported($file)) {
-            say "[Skipping] Already imported node: $file" if $OPT{verbose};
+            warn "[Skipping] Already imported node: $file" if $OPT{verbose};
+            next;
         }
-        else {
-            $count += import_node_data(parse_xml($file));
+        try {
+            my $node_date = parse_xml($file);
+            $count += import_node_data($node_date);
+        }
+        catch ($error) {
+            warn "[Skipping] Failed to import node $file: $error\n";
         }
         last if defined $OPT{limit} && $count == $OPT{limit};
     }
