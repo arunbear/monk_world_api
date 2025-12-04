@@ -28,8 +28,20 @@ process_xml();
 sub process_xml {
     my $files = get_input_for_parsing();
     my $count = 0;
+    my $interrupted = false;
+
+    # Set up signal handler for clean interrupt
+    local $SIG{INT} = sub {
+        $interrupted = true;
+        warn "\n[Interrupted] Finishing current operation... (Press Ctrl+C again to force quit)";
+        $SIG{INT} = sub { exit 1 };  # Allow force quit on second interrupt
+    };
 
     foreach my $file (@$files) {
+        if ($interrupted) {
+            warn "[Info] Import interrupted by user";
+            last;
+        }
         if (already_imported($file)) {
             warn "[Skipping] Already imported node: $file" if $OPT{verbose};
             next;
