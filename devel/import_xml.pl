@@ -12,13 +12,13 @@ use MonkWorld::API::Pg;
 use MonkWorld::API::Request;
 
 my %OPT = (
-    'use-api' => true,
     uri       => 'http://localhost:3000',
+    resume    => false,
     verbose   => false,
 );
 GetOptions(\%OPT,
-    'use-api!',
     'uri=s',
+    'resume',
     'verbose',
     'limit=i'
 ) or die "Error in command line arguments\n";
@@ -32,6 +32,10 @@ sub process_xml {
     foreach my $file (@$files) {
         if (already_imported($file)) {
             warn "[Skipping] Already imported node: $file" if $OPT{verbose};
+            next;
+        }
+        if ($OPT{resume} && (my $res = is_before_last_imported_node($file))) {
+            warn $res if $OPT{verbose};
             next;
         }
         try {
@@ -110,6 +114,26 @@ sub node_exists ($node_id) {
     my $db = $pg->db;
     my $result = $db->select('node', ['id'], { id => $node_id });
     return defined $result->hash;
+}
+
+# Check if a file's node ID is before the last imported node
+# Returns true if the file should be skipped during resume
+sub is_before_last_imported_node ($file) {
+    my ($file_node_id) = $file =~ m/(\d+)\.xml$/i or return false;
+    my $max_id = get_max_node_id();
+
+    if ($file_node_id <= $max_id) {
+        my $msg = "[Skipping] Node ID $file_node_id is lower than max node ID $max_id";
+        return $msg;
+    }
+    return false;
+}
+
+sub get_max_node_id {
+    my $pg = get_db_connection();
+    my $db = $pg->db;
+    my $result = $db->query('SELECT COALESCE(MAX(id), 0) AS max_id FROM node');
+    return $result->hash->{max_id};
 }
 
 sub get_input_for_parsing {
@@ -208,6 +232,7 @@ sub insert_node_api ($node_data) {
     my $tx = api_ua()->build_tx($req->tx_args);
     my $res = api_ua()->start($tx)->result;
     if ($res->is_success) {
+        say "Imported: $node_data->{node_id}";
         return 1;
     }
     my $err = eval { $res->json('/error') } // $res->body;
