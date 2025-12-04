@@ -42,12 +42,12 @@ sub process_xml {
             warn "[Info] Import interrupted by user";
             last;
         }
-        if (already_imported($file)) {
-            warn "[Skipping] Already imported node: $file" if $OPT{verbose};
-            next;
-        }
         if ($OPT{resume} && (my $res = is_before_last_imported_node($file))) {
             warn $res if $OPT{verbose};
+            next;
+        }
+        elsif (already_imported($file)) {
+            warn "[Skipping] Already imported node: $file" if $OPT{verbose};
             next;
         }
         try {
@@ -135,7 +135,7 @@ sub node_exists ($node_id) {
 # Returns true if the file should be skipped during resume
 sub is_before_last_imported_node ($file) {
     my ($file_node_id) = $file =~ m/(\d+)\.xml$/i or return false;
-    my $max_id = get_max_node_id();
+    state $max_id = get_max_node_id();
 
     if ($file_node_id <= $max_id) {
         my $msg = "[Skipping] Node ID $file_node_id is lower than max node ID $max_id";
@@ -145,6 +145,7 @@ sub is_before_last_imported_node ($file) {
 }
 
 sub get_max_node_id {
+    warn "[Info] Getting max node ID" if $OPT{verbose};
     my $pg = get_db_connection();
     my $db = $pg->db;
     my $result = $db->query('SELECT COALESCE(MAX(id), 0) AS max_id FROM node');
@@ -213,6 +214,7 @@ sub ensure_author_exists_api ($node_data) {
 
     my $tx = api_ua()->build_tx($req->tx_args);
     my $res = api_ua()->start($tx)->result;
+    warn $res->to_string if $OPT{verbose};
 
     return 1 if $res->is_success;
     return 1 if $res->code && $res->code == HTTP_CONFLICT; # already exists
