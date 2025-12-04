@@ -6,6 +6,7 @@ use Getopt::Long;
 use HTTP::Status qw(HTTP_CONFLICT);
 use Mojo::DOM;
 use Mojo::Util qw(trim);
+use Time::Piece;
 use XXX -with => 'Data::Dump';
 use Mojo::UserAgent;
 use MonkWorld::API::Pg;
@@ -115,6 +116,37 @@ sub import_node_data ($node_data) {
 }
 
 # ====== Utility Functions ======
+
+# Reformat date from '20090414103603' to '2009-04-14 10:36:03'
+# Returns the date unchanged if it doesn't match the expected format
+sub reformat_date ($date) {
+    return $date unless defined $date;
+
+    my $tp;
+    $tp = eval { Time::Piece->strptime($date, '%Y-%m-%d %H:%M:%S') };
+    if ($tp) {
+        return $date;
+    }
+
+    try {
+        # Handle compact format: YYYYMMDDHHMMSS
+        if ($date =~ /^\d{14}$/) {
+            $tp = Time::Piece->strptime($date, '%Y%m%d%H%M%S');
+        }
+        # Handle other formats if needed
+        # elsif ($date =~ /some-other-format/) {
+        #     $tp = Time::Piece->strptime($date, 'format-string');
+        # }
+
+        return $tp->strftime('%Y-%m-%d %H:%M:%S');
+    }
+    catch ($error) {
+        warn "[Warning] Could not parse date format: $date";
+    }
+
+    # If we can't parse it, return it as is (this might cause database errors)
+    return $date;
+}
 
 sub already_imported ($file) {
     # Extract node ID from filename (assuming format like '12345.xml')
@@ -238,7 +270,7 @@ sub insert_node_api ($node_data) {
             author_id    => $node_data->{author_id},
             title        => $node_data->{title},
             doctext      => $node_data->{doctext},
-            created      => $node_data->{created},
+            created      => reformat_date($node_data->{created}),
             updated      => $node_data->{updated},
             (($node_data->{type_id} == 11) ? (
                 root_node   => $node_data->{root_node},
