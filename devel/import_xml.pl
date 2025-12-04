@@ -79,13 +79,16 @@ sub parse_xml ($xml_file) {
 
     # Extract author
     my $author = $node->at('author');
-    $field{author_id}       = $author->attr('id');
+    $field{author_id} = $author->attr('id')
+      or die "[Skipping] Author ID is required: $xml_file";
     $field{author_username} = trim($author->text);
 
     if (my $data = $node->at('data')) {
-        for my $name (qw(doctext reputation root_node parent_node)) {
+        for my $name (qw(doctext root_node parent_node)) {
             if (my $field_elem = $data->at(qq{field[name="$name"]})) {
                 $field{$name} = trim($field_elem->text // '');
+                $field{$name} =~ /\S+/
+                  or die "[Skipping] $name is required: $xml_file";
             }
         }
     }
@@ -240,6 +243,8 @@ sub insert_node_api ($node_data) {
         || $err =~ /parent_node.+ is not present/
         || $err =~ /root_node.+ is not present/
         || $err =~ /Non root parent \d+ not present/
+        || $err =~ /node_type_id, title, and doctext are required/
+        || $err =~ /author_id.+ is not present/ # PM usernames are not unique
     ) {
         my $dump = $OPT{verbose} ? dump($node_data) : '';
         warn "[Skipping] Failed to import node $node_data->{node_id}: $err\n$dump";
